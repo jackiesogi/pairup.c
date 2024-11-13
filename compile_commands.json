@@ -1,0 +1,17 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-g",
+      "-w",
+      "-Ilib",
+      "-c",
+      "-o",
+      "build/pairup/pairup-types.o",
+      "src/pairup/pairup-types.c"
+    ],
+    "directory": "/home/jck/Downloads/gitrepo/pairup",
+    "file": "/home/jck/Downloads/gitrepo/pairup/src/pairup/pairup-types.c",
+    "output": "/home/jck/Downloads/gitrepo/pairup/build/pairup/pairup-types.o"
+  }
+]
