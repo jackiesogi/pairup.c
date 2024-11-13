@@ -1,6 +1,8 @@
 #ifndef PAIRUP_FORMATTER_H
 #define PAIRUP_FORMATTER_H
 
+#include "pairup-types.h"
+
 #define GREETING "Enjoy the chat :D"
 
 #define ALTERNATIVES_FOR_NOT_MATCHED " \n\
@@ -14,7 +16,10 @@ related to weekly topic. ONLY on Monday can talk about \n\
 your last weekend or sharing something interesting."
 
 /* TODO: Fix the parameter */
-void print_result (const char *pair_list,
-		   const char *single_list);
+void
+print_result (int pairs,
+              int singles,
+              const pair_t **pair_list,
+		      const char **single_list);
 		   
 #endif  // PAIRUP_FORMATTER_H

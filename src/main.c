@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "pairup/pairup.h"
 #include "rw-csv.h"
 #include "pairup/pairup.h"
 
@@ -26,6 +27,8 @@ main (int argc, char *argv[])
     printf("Below are the pairing results:\n");
 
     pair_result_t *result = pairup (&sheet);
+
+    print_result (result->pairs, result->singles, (const pair_t **)result->pair_list, (const char **)result->single_list);
 
     return 0;
 }
