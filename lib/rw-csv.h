@@ -32,7 +32,7 @@ int
 _get_ccount (FILE *file);
 
 void
-free_sheet (sheet_t *sheet);
+free_sheet (sheet_t **sheet);
 
 void
 set_cell (sheet_t *sheet,
@@ -47,5 +47,11 @@ get_cell (sheet_t *sheet,
           int col,
           char *buf,
           int buf_size);
+void
+get_cell_from_one (sheet_t *sheet,
+                   int row,
+                   int col,
+                   char *buf,
+                   int buf_size);
 
 #endif  // RW_CSV_H

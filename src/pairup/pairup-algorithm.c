@@ -61,127 +61,163 @@ _idx_to_name(const adjmatrix_t *graph, int idx)
 // }
 
 static void 
-_generate_matches_graph (sheet_t *sheet,
-                         adjmatrix_t *records)
+_generate_matches_graph(sheet_t *sheet, adjmatrix_t *records)
 {
     int i, j, k;
     char cell[8];
 
-    /* Build the adjacency matrix representing the match condition */
+    /* Initialize the adjacency matrix's member count and rows */
+    records->rows = 0;
+    int member_capacity = 10;  // Initial capacity for members array
+    records->members = (adjmatrix_row_t **) malloc(member_capacity * sizeof(adjmatrix_row_t *));
+
     /* Scan each row (members' name) */
     for (i = _FILED_ROW_START; i < sheet->rows; i++)
     {
         int count = 0;
-        bool first = false;
-        adjmatrix_row_t *member = &records->members[i];
+        bool first = true;
+        adjmatrix_row_t *member = NULL;
 
         /* Scan each column (time slots) */
         for (j = _FILED_COL_START; j <= _FILED_COL_END; j++)
         {
-            get_cell (sheet, i, j, cell, sizeof (cell));
+            get_cell(sheet, i, j, cell, sizeof(cell));
 
-            if (is_available (cell))
+            if (is_available(cell))
             {
-                /* Record the first available time slot */
-                if (!first)
+                /* If this is the first available slot for this row, allocate a new member */
+                if (first)
                 {
-                    records->rows++;
+                    /* Resize the members array if capacity is reached */
+                    if (records->rows >= member_capacity)
+                    {
+                        member_capacity *= 2;
+                        records->members = (adjmatrix_row_t **) realloc(records->members, member_capacity * sizeof(adjmatrix_row_t *));
+                    }
+
+                    /* Allocate memory for this member and initialize */
+                    records->members[records->rows] = (adjmatrix_row_t *) malloc(sizeof(adjmatrix_row_t));
+                    member = records->members[records->rows];
+
+                    /* Initialize the member data */
+                    member->idx = i;
+                    member->read_order = i;
                     member->earliest_time = j;
-                    first = true;
+                    member->availability = 1;
+                    member->count = 0;
+                    member->remain = 1;
+                    records->rows++;
+                    if (is_twice(cell))
+                    {
+                        member->remain = 2;
+                    }
+                    first = false;
                 }
 
-                member->idx = i;
-                member->read_order = i;
+                /* Update availability and match data */
                 member->availability++;
 
-                /* Search in same column to see which row is also available */
+                /* Search in the same column to find matching rows */
                 for (k = _FILED_ROW_START; k < sheet->rows; k++)
                 {
-                    get_cell (sheet, k, j, cell, sizeof (cell));
+                    get_cell(sheet, k, j, cell, sizeof(cell));
 
-                    if (is_available (cell))
+                    /* Check if k has not been added */
+                    for (int l = 0; l < count; l++)
                     {
+                        if (member->matches[l] == k)
+                        {
+                            break;
+                        }
+                    }
+
+                    if (is_available(cell) && k != i)
+                    {
+                        if (count >= _MAX_MATCHES_LEN - 1)
+                        {
+                            break;
+                        }
                         member->matches[count++] = k;
                     }
                 }
             }
         }
 
-        /* Important: Set the last element to -1 */
-        records->members[i].matches[count] = -1;
-        records->members[i].count = count;
-        records->name_map[i] = &sheet->data[i][_FILED_COL_NAME];
+        /* Set the last element of matches to -1 to mark the end, if member was allocated */
+        if (member)
+        {
+            member->matches[count] = -1;
+            member->count = count;
+            records->name_map[member->idx] = sheet->data[i][_FILED_COL_NAME];
+        }
     }
 }
 
 /* TODO: Add time dimension to the pair_result */
 static pair_result_t *
-_pairup_least_availability_first (const adjmatrix_t *graph)
+_pairup_least_availability_first(const adjmatrix_t *graph)
 {
-    int i, j;  // Loop index
-    int count = 0;  // Calculate the total number of pairs
-    int partner_idx;  // The index of the partner in the original sheet
-    int remain[_MAX_MATCHES_LEN] = {0};  // The remaining practice time (either 0, 1, or 2)
-    
+    int i, j, count = 0, partner_idx;
+    int remain[_MAX_MATCHES_LEN] = {0};
     pair_result_t *result = _new_pair_result(0, 0, 0);
 
-    /* Initialize the array to store the ramaining practice time */
+    // Initialize remain array
     for (i = 0; i < graph->rows; i++)
     {
-        const adjmatrix_row_t me = graph->members[i];
-        remain[me.idx] = me.availability;
+        const adjmatrix_row_t *me = graph->members[i];
+        if (me->idx < _MAX_MATCHES_LEN)
+        {
+            remain[me->idx] = me->remain;
+        }
     }
 
-    /* Start traversing the graph using BFS and match the members */
+    // Traverse graph for pairing
     for (i = 0; i < graph->rows; i++)
     {
-        const adjmatrix_row_t me = graph->members[i];
-        int row_size = me.count;
+        const adjmatrix_row_t *me = graph->members[i];
+
+        if (me == NULL || remain[me->idx] == 0) continue; // Skip if unavailable
+        int row_size = me->count;
 
         for (j = 0; j < row_size; j++)
         {
-            partner_idx = me.matches[j];
-
-            /* Check if the current member and its potential partner are both available */
-            if (remain[i] > 0 && remain[partner_idx] > 0)
+            partner_idx = me->matches[j];
+            if (partner_idx < _MAX_MATCHES_LEN && remain[me->idx] > 0 && remain[partner_idx] > 0)
             {
-                /* Retrieve the name of the current member and its partner */
-                char *a = _idx_to_name(graph, me.idx);
+                char *a = _idx_to_name(graph, me->idx);
                 char *b = _idx_to_name(graph, partner_idx);
 
-                /* Copy the names into the result */
-                strncpy(result->pair_list[count]->a, a, MAX_NAME_LEN - 1);
-                strncpy(result->pair_list[count]->b, b, MAX_NAME_LEN - 1);
+                if (count < _MAX_MATCHES_LEN)
+                {
+                    strncpy(result->pair_list[count].a, a, MAX_NAME_LEN - 1);
+                    strncpy(result->pair_list[count].b, b, MAX_NAME_LEN - 1);
+                    result->pair_list[count].a[MAX_NAME_LEN - 1] = '\0';
+                    result->pair_list[count].b[MAX_NAME_LEN - 1] = '\0';
+                    count++;
+                }
 
-                /* Ensure the string is null-terminated */
-                result->pair_list[count]->a[MAX_NAME_LEN - 1] = '\0';
-                result->pair_list[count]->b[MAX_NAME_LEN - 1] = '\0';
-
-                /* Increment the counter and substract the remaining time by 1 */
-                ++count;
-                --remain[me.idx];
-                --remain[partner_idx];
+                remain[me->idx]--;
+                remain[partner_idx]--;
             }
         }
     }
 
-    /* Update the result metadata */
+    // Update result metadata
     result->member = graph->rows;
     result->pairs = count;
     result->singles = 0;
 
-    /* Handle the singles */
+    /* Process singles */
     for (i = 0; i < _MAX_MATCHES_LEN; i++)
     {
-        if (remain[i] > 0)
+        if (remain[i] > 0 && result->singles < _MAX_MATCHES_LEN)
         {
             char *name = _idx_to_name(graph, i);
             strncpy(result->single_list[result->singles], name, MAX_NAME_LEN - 1);
             result->single_list[result->singles][MAX_NAME_LEN - 1] = '\0';
-            ++result->singles;
+            result->singles++;
         }
     }
 
     return result;
 }
-

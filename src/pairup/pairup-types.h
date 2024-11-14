@@ -27,9 +27,9 @@ struct pair_result
     int pairs;
     int singles;
     
-    char **member_list;
-    struct pair **pair_list;
-    char **single_list;
+    char member_list[_MAX_MATCHES_LEN][MAX_NAME_LEN];
+    struct pair pair_list[_MAX_MATCHES_LEN];
+    char single_list[_MAX_MATCHES_LEN][MAX_NAME_LEN];
 };
 
 typedef struct pair pair_t;
@@ -39,7 +39,8 @@ typedef struct pair_result pair_result_t;
 struct adjmatrix_row
 {
     int idx;
-    int count;
+    int count;  // Number of matches
+    int remain;  // Number of practice time
     int earliest_time;
     int read_order;
     int availability;
@@ -50,7 +51,7 @@ struct adjmatrix
 {
     int rows;
     char *name_map[_MAX_MATCHES_LEN];
-    struct adjmatrix_row members[_MAX_MATCHES_LEN];
+    struct adjmatrix_row **members;
 };
 
 typedef struct adjmatrix_row adjmatrix_row_t;

@@ -119,7 +119,8 @@ get_token (FILE *stream,
     return token;
 }
 
-int _get_rcount(FILE *file)
+int
+_get_rcount (FILE *file)
 {
     int count = 0;
     char ch;
@@ -134,7 +135,8 @@ int _get_rcount(FILE *file)
     return count;
 }
 
-int _get_ccount(FILE *file)
+int
+_get_ccount (FILE *file)
 {
     int count = 0;
     char ch;
@@ -151,18 +153,31 @@ int _get_ccount(FILE *file)
     return count + 1;
 }
 
-void free_sheet(sheet_t *sheet)
+void free_sheet(sheet_t **sheet)
 {
-    for (int i = 0; i < sheet->rows; ++i)
+    if (!sheet || !*sheet)
     {
-        for (int j = 0; j < sheet->cols; ++j)
-        {
-            free(sheet->data[i][j]);
-        }
-        free(sheet->data[i]);
+        return;
     }
-    free(sheet->data);
-    free(sheet->path);
+
+    for (int i = 0; i < (*sheet)->rows; ++i)
+    {
+        for (int j = 0; j < (*sheet)->cols; ++j)
+        {
+            free((*sheet)->data[i][j]);
+            (*sheet)->data[i][j] = NULL;
+        }
+        free((*sheet)->data[i]);
+        (*sheet)->data[i] = NULL;
+    }
+    free((*sheet)->data);
+    (*sheet)->data = NULL;
+
+    free((*sheet)->path);
+    (*sheet)->path = NULL;
+
+    free(*sheet);
+    *sheet = NULL;
 }
 
 void
@@ -184,6 +199,32 @@ set_cell (sheet_t *sheet,
 }
 
 void
+get_cell_from_one (sheet_t *sheet,
+                   int row,
+                   int col,
+                   char *buf,
+                   int buf_size)
+{
+    if (row <= 0 || row > sheet->rows || col <= 0 || col > sheet->cols)
+    {
+        fprintf(stderr, "Invalid cell position\n");
+        return;
+    }
+
+    char *cell = sheet->data[row - 1][col - 1];
+
+    if (cell == NULL)
+    {
+        snprintf(buf, buf_size, "");
+    }
+    else
+    {
+        strncpy(buf, cell, buf_size - 1);
+        buf[buf_size - 1] = '\0';
+    }
+}
+
+void
 get_cell (sheet_t *sheet,
           int row,
           int col,
@@ -196,7 +237,7 @@ get_cell (sheet_t *sheet,
         return;
     }
 
-    char *cell = sheet->data[row - 1][col - 1];
+    char *cell = sheet->data[row][col];
 
     if (cell == NULL)
     {

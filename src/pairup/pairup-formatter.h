@@ -22,4 +22,7 @@ print_result (int pairs,
               const pair_t **pair_list,
 		      const char **single_list);
 		   
+void
+print_result_full (pair_result_t *result);
+
 #endif  // PAIRUP_FORMATTER_H

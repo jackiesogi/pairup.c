@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include "pairup-types.h"
 
@@ -49,63 +50,41 @@ bool is_available (const char *sign)
 }
 
 /* Allocator and deallocator */
+/* Allocator for pair_result_t */
 pair_result_t *
-_new_pair_result (int member,
-                  int pairs,
-                  int singles)
+_new_pair_result(int pairs, int singles, int members)
 {
-    pair_result_t *result = (pair_result_t *) malloc(sizeof(pair_result_t));
+    pair_result_t *result = (pair_result_t *)malloc(sizeof(pair_result_t));
+    if (result == NULL)
+    {
+        fprintf(stderr, "Memory allocation failed for pair_result_t\n");
+        return NULL;
+    }
 
-    result->member = member;
     result->pairs = pairs;
     result->singles = singles;
+    result->member = members;
 
-    result->member_list = (char **) malloc(member * sizeof(char *));
-    for (int i = 0; i < member; i++)
+    // Initialize pair_list and single_list arrays with empty strings
+    for (int i = 0; i < _MAX_MATCHES_LEN; i++)
     {
-        result->member_list[i] = (char *) malloc(MAX_NAME_LEN * sizeof(char));
-    }
-
-    result->pair_list = (pair_t **) malloc(pairs * sizeof(pair_t *));
-    for (int i = 0; i < pairs; i++)
-    {
-        result->pair_list[i] = (pair_t *) malloc(sizeof(pair_t));
-    }
-
-    result->single_list = (char **) malloc(singles * sizeof(char *));
-    for (int i = 0; i < singles; i++)
-    {
-        result->single_list[i] = (char *) malloc(MAX_NAME_LEN * sizeof(char));
+        result->pair_list[i].a[0] = '\0';
+        result->pair_list[i].b[0] = '\0';
+        result->single_list[i][0] = '\0';
     }
 
     return result;
 }
 
-// Deallocator for pair_result_t
+/* Deallocator for pair_result_t */
 void
-_free_pair_result (pair_result_t *result)
+_free_pair_result(pair_result_t *result)
 {
     if (!result)
         return;
 
-    for (int i = 0; i < result->member; i++)
-    {
-        free(result->member_list[i]);
-    }
-    free(result->member_list);
-
-    for (int i = 0; i < result->pairs; i++)
-    {
-        free(result->pair_list[i]);
-    }
-    free(result->pair_list);
-
-    for (int i = 0; i < result->singles; i++)
-    {
-        free(result->single_list[i]);
-    }
-    free(result->single_list);
-
+    // Since member_list, pair_list, and single_list are statically allocated in struct,
+    // we only need to free the result itself
     free(result);
 }
 
@@ -123,6 +102,18 @@ _new_matches_graph (void)
     for (int i = 0; i < _MAX_MATCHES_LEN; i++)
     {
         graph->name_map[i] = NULL;
+    }
+
+    graph->members = (struct adjmatrix_row **) malloc (_MAX_MATCHES_LEN * sizeof(struct adjmatrix_row *));
+    if (graph->members == NULL)
+    {
+        free(graph);
+        return NULL;
+    }
+
+    for (int i = 0; i < _MAX_MATCHES_LEN; i++)
+    {
+        graph->members[i] = NULL;
     }
 
     return graph;
