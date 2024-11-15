@@ -24,7 +24,7 @@ main(int argc, char *argv[])
         printf("\n");
     }
 
-    printf("Below are the pairing results:\n");
+    printf("\nBelow are the pairing results:\n");
 
     pair_result_t *result = pairup(&sheet);
     if (!result)
@@ -33,7 +33,7 @@ main(int argc, char *argv[])
         return 1;
     }
 
-    print_result_full (result);
+    print_result (result);
 
     return 0;
 }

@@ -3,20 +3,23 @@
 #include "pairup-types.h"
 
 void
-print_result(int pairs,
-             int singles,
-             const pair_t *pair_list[],
-             const char *single_list[])
+print_result (pair_result_t *result)
 {
-    // Print the first pair if available
-    if (pairs > 0 && pair_list[0] != NULL)
-    {
-        printf("%s -- %s\n", pair_list[0]->a, pair_list[0]->b);
-    }
-    else
+    printf("%s\n", GREETING);
+
+    if (result->pairs == 0)
     {
         printf("No pairs available to display.\n");
     }
+    else 
+    {
+        for (int i = 0; i < result->pairs; i++)
+        {
+            printf("%s -- %s\n", result->pair_list[i].a, result->pair_list[i].b);
+        }
+    }
+    printf("As for\n");
+    printf("%s\n", ALTERNATIVES_FOR_NOT_MATCHED);
 }
 
 void

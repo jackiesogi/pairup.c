@@ -50,9 +50,83 @@ bool is_available (const char *sign)
 }
 
 /* Allocator and deallocator */
-/* Allocator for pair_result_t */
+member_t *
+_new_member (void)
+{
+    return (member_t *) malloc (sizeof(member_t));
+}
+
+void
+_free_member (member_t *m)
+{
+    if (!m)
+    {
+        return;
+    }
+
+    free (m);
+}
+
+pair_t *
+_new_pair (void)
+{
+    return (pair_t *) malloc (sizeof(pair_t));
+}
+
+void
+_free_pair (pair_t *p)
+{
+    if (!p)
+    {
+        return;
+    }
+
+    free (p);
+}
+
+relation_t *
+_new_relation (void)
+{
+    return (relation_t *) malloc (sizeof(relation_t));
+}
+
+void
+_free_relation (relation_t *r)
+{
+    if (!r)
+    {
+        return;
+    }
+
+    free (r);
+}
+
+relation_graph_t *
+_new_relation_graph (void)
+{
+    return (relation_graph_t *) malloc (sizeof(relation_graph_t));
+}
+
+void
+_free_relation_graph (relation_graph_t *graph)
+{
+    if (!graph)
+    {
+        return;
+    }
+
+    for (int i = 0; i < graph->count; i++)
+    {
+        _free_relation (graph->relations[i]);
+    }
+
+    free (graph);
+}
+
 pair_result_t *
-_new_pair_result(int pairs, int singles, int members)
+_new_pair_result (int pairs,
+                  int singles,
+                  int members)
 {
     pair_result_t *result = (pair_result_t *)malloc(sizeof(pair_result_t));
     if (result == NULL)
@@ -61,71 +135,22 @@ _new_pair_result(int pairs, int singles, int members)
         return NULL;
     }
 
-    result->pairs = pairs;
-    result->singles = singles;
     result->member = members;
+    result->singles = singles;
+    result->pairs = pairs;
 
-    // Initialize pair_list and single_list arrays with empty strings
-    for (int i = 0; i < _MAX_MATCHES_LEN; i++)
-    {
-        result->pair_list[i].a[0] = '\0';
-        result->pair_list[i].b[0] = '\0';
-        result->single_list[i][0] = '\0';
-    }
-
+    /* Currently the member graph, single_list, pair_list are not dynamically allocated */
     return result;
 }
 
-/* Deallocator for pair_result_t */
 void
-_free_pair_result(pair_result_t *result)
+_free_pair_result (pair_result_t *result)
 {
     if (!result)
+    {
         return;
+    }
 
-    // Since member_list, pair_list, and single_list are statically allocated in struct,
-    // we only need to free the result itself
     free(result);
 }
 
-adjmatrix_t *
-_new_matches_graph (void)
-{
-    adjmatrix_t *graph = (adjmatrix_t *) malloc (sizeof (adjmatrix_t));
-    if (graph == NULL)
-    {
-        return NULL;
-    }
-
-    graph->rows = 0;
-
-    for (int i = 0; i < _MAX_MATCHES_LEN; i++)
-    {
-        graph->name_map[i] = NULL;
-    }
-
-    graph->members = (struct adjmatrix_row **) malloc (_MAX_MATCHES_LEN * sizeof(struct adjmatrix_row *));
-    if (graph->members == NULL)
-    {
-        free(graph);
-        return NULL;
-    }
-
-    for (int i = 0; i < _MAX_MATCHES_LEN; i++)
-    {
-        graph->members[i] = NULL;
-    }
-
-    return graph;
-}
-
-void
-_free_matches_graph (adjmatrix_t *graph)
-{
-    for (int i = 0; i < _MAX_MATCHES_LEN; i++)
-    {
-        free(graph->name_map[i]);
-    }
-
-    free(graph);
-}

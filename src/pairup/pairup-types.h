@@ -1,6 +1,7 @@
 #ifndef PAIRUP_TYPES_H
 #define PAIRUP_TYPES_H
 
+#include <stddef.h>
 #include <stdlib.h>
 #include <stdbool.h>
 
@@ -14,57 +15,91 @@
 #define  _FILED_COL_START  2 
 #define  _FILED_COL_END    16
 #define  _MAX_MATCHES_LEN  64 
+#define  _MAX_MEMBERS_LEN  64 
+
+/*********************  New data types  *************************/
+struct member
+{
+    int    id;                     // Row number on the google sheet
+    char   name[MAX_NAME_LEN];    // Name of the member
+    size_t requests;            // Number of requested practice time
+    size_t availability;        // Number of time slots available
+    int    earliest_slot;             // Earliest time slot on the sheet
+};
+
+typedef struct member member_t;
 
 struct pair
 {
-    char a[MAX_NAME_LEN];
-    char b[MAX_NAME_LEN];
+    struct member *a;    // Member A
+    struct member *b;    // Member B
 };
+
+typedef struct pair pair_t;
+
+struct relation
+{
+    // struct member *member;  // Member that this row represents
+    // char name[MAX_NAME_LEN];  // Name of the member
+    size_t count;             // Number of candidates for this member
+    int priority;             // Priority of this member
+    struct member *candidates[_MAX_MATCHES_LEN];  // Candidates for this member
+};
+
+typedef struct relation relation_t;
+
+struct relation_graph
+{
+    size_t count;   // Number of relations
+    struct relation *relations[_MAX_MATCHES_LEN];  // Relations
+};
+
+typedef struct relation_graph relation_graph_t;
+
+// For example:
+// today.relations[i].name
+// today.relations[i].candidates[j]
+
+/*********************  New data types  *************************/
 
 struct pair_result
 {
     int member;
-    int pairs;
     int singles;
+    int pairs;
     
-    char member_list[_MAX_MATCHES_LEN][MAX_NAME_LEN];
-    struct pair pair_list[_MAX_MATCHES_LEN];
-    char single_list[_MAX_MATCHES_LEN][MAX_NAME_LEN];
+    member_t *member_list[_MAX_MATCHES_LEN];
+    member_t *single_list[_MAX_MATCHES_LEN];
+    struct pair *pair_list[_MAX_MATCHES_LEN];
 };
 
 typedef struct pair pair_t;
 typedef struct pair_result pair_result_t;
 
-/* Adjacency matrix for representing the availability graph */
-struct adjmatrix_row
-{
-    int idx;
-    int count;  // Number of matches
-    int remain;  // Number of practice time
-    int earliest_time;
-    int read_order;
-    int availability;
-    int matches[_MAX_MATCHES_LEN];
-};
+/* Allocator and deallocator for the data types */
+member_t *
+_new_member (void);
 
-struct adjmatrix
-{
-    int rows;
-    char *name_map[_MAX_MATCHES_LEN];
-    struct adjmatrix_row **members;
-};
+void
+_free_member (member_t *member);
 
-typedef struct adjmatrix_row adjmatrix_row_t;
-typedef struct adjmatrix adjmatrix_t;
-// For example:
-// graph->members[i].matches[j]
-// graph->members[i].availability
+pair_t *
+_new_pair (void);
 
-adjmatrix_t *
-_new_matches_graph (void);
+void
+_free_pair (pair_t *pair);
+
+relation_t *
+_new_relation (void);
+
+void
+_free_relation (relation_t *relation);
+
+relation_graph_t *
+_new_relation_graph (void);
 
 void 
-_free_matches_graph (adjmatrix_t *graph);
+_free_relation_graph (relation_graph_t *today);
 
 pair_result_t *
 _new_pair_result (int member,

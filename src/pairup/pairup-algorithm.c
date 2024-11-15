@@ -1,26 +1,64 @@
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 #include <time.h>
 
 #include "pairup-algorithm.h"
 #include "pairup-types.h"
 #include "rw-csv.h"
 
-/* Public Access API */
-/* Note that the result should be freed by the caller */
-/* TODO: Implement all the algorithms and choose the best one */
+static void 
+_generate_relations (sheet_t *worksheet,
+                     relation_graph_t *today,
+                     member_t *member_list[]);
+
+static int
+_generate_member_list (sheet_t *worksheet,
+                       member_t *member_list[]);
+
+/***************************  Public Access API  ******************************/
 pair_result_t *
-pairup (sheet_t *sheet)
+pairup (sheet_t *worksheet)
 {
-    adjmatrix_t *graph = _new_matches_graph ();
-    _generate_matches_graph (sheet, graph);
+    relation_graph_t *graph = _new_relation_graph();
+    member_t *member_list[_MAX_MEMBERS_LEN] = { NULL };
 
-    /* Priority: member-availability-based algorithm */
-    pair_result_t *result = _pairup_least_availability_first (graph);
+    /* Generate relations using the existing member_list */
+    /* This will take in the empty member_list and fill it with the available members */
+    _generate_member_list (worksheet, member_list);
+    _generate_relations (worksheet, graph, member_list);
 
-    _free_matches_graph (graph);
-    return result;
+    /* Initialize the best result and temporary result */
+    pair_result_t *best, *temp;
+    best = temp = NULL;
+
+    for (int i = 0; i < _MAX_PAIRUP_ALGORITHMS; i++)
+    {
+        pairup_fn algorithm = pairup_algorithms[i];
+
+        if (!algorithm)  continue;
+
+        /* Get the pairing result of current algorithm */
+        temp = algorithm (graph, member_list);
+
+        if (!best || temp->pairs > best->pairs)
+        {
+            if (best)
+            {
+                _free_pair_result (best);
+            }
+            best = temp;
+        }
+        else
+        {
+            _free_pair_result (temp);
+        }
+    }
+
+    _free_relation_graph (graph);
+    return best;
 }
+/***************************  Public Access API  ******************************/
 
 /* Generate random seed based on the current time */
 int
@@ -31,23 +69,23 @@ _get_random_seed (void)
     return (int) now;
 }
 
-static char *
-_idx_to_name(const adjmatrix_t *graph, int idx)
-{
-    return graph->name_map[idx];
-}
+// static char *
+// _idx_to_name(const relation_list_t *today, int idx)
+// {
+//     return today->name_map[idx];
+// }
 
-// void _count_availablity (adjmatrix_t *graph)
+// void _count_availablity (relation_list_t *today)
 // {
 //     int i, j;
 //     int count = 0;
 //     int partner;
 //     
-//     for (i = 0; i < graph->rows; i++)
+//     for (i = 0; i < today->count; i++)
 //     {
 //         for (j = 0; j < _MAX_MATCHES_LEN; j++)
 //         {
-//             partner = graph->members[i].matches[j];
+//             partner = today->members[i].matches[j];
 //
 //             if (partner == -1)
 //             {
@@ -56,76 +94,153 @@ _idx_to_name(const adjmatrix_t *graph, int idx)
 //
 //             ++count;
 //         }
-//         graph->members[i].availability = count;
+//         today->members[i].availability = count;
 //     }
 // }
 
-static void 
-_generate_matches_graph(sheet_t *sheet, adjmatrix_t *records)
+static int
+_get_member_availability (sheet_t *worksheet,
+                          int id)
 {
-    int i, j, k;
+    int j, count = 0;
     char cell[8];
 
-    /* Initialize the adjacency matrix's member count and rows */
-    records->rows = 0;
-    int member_capacity = 10;  // Initial capacity for members array
-    records->members = (adjmatrix_row_t **) malloc(member_capacity * sizeof(adjmatrix_row_t *));
+    for (j = _FILED_COL_START; j <= _FILED_COL_END; j++)
+    {
+        get_cell (worksheet, id, j, cell, sizeof(cell));
+        if (is_available(cell))
+        {
+            count++;
+        }
+    }
+
+    return count;
+}
+
+static int
+_get_member_earliest_slot (sheet_t *worksheet,
+                           int id)
+{
+    int j;
+    char cell[8];
+
+    for (j = _FILED_COL_START; j <= _FILED_COL_END; j++)
+    {
+        get_cell (worksheet, id, j, cell, sizeof(cell));
+        if (is_available(cell))
+        {
+            return j;
+        }
+    }
+
+    return -1;
+}
+
+static int
+_get_member_requests (sheet_t *worksheet,
+                      int id)
+{
+    int j;
+    char cell[8];
+
+    for (j = _FILED_COL_START; j <= _FILED_COL_END; j++)
+    {
+        get_cell (worksheet, id, j, cell, sizeof(cell));
+        if (is_once(cell))
+        {
+            return 1;
+        }
+        if (is_twice(cell))
+        {
+            return 2;
+        }
+    }
+
+    return 0;
+}
+
+static char *
+_get_member_name (sheet_t *worksheet,
+                  int id)
+{
+    return worksheet->data[id][_FILED_COL_NAME];
+}
+
+static int
+_generate_member_list (sheet_t *worksheet,
+                       member_t *member_list[])
+{
+    int i, count = 0;
+
+    for (i = _FILED_ROW_START; i < worksheet->rows; i++)
+    {
+        member_t *member = _new_member();
+        member->id = i;
+        strncpy(member->name, _get_member_name(worksheet, i), MAX_NAME_LEN - 1);
+        member->name[MAX_NAME_LEN - 1] = '\0';
+        member->requests = _get_member_requests(worksheet, i);
+        member->availability = _get_member_availability(worksheet, i);
+        member->earliest_slot = _get_member_earliest_slot(worksheet, i);
+
+        member_list[i] = member;
+        count++;
+    }
+
+    return count;
+}
+
+/************************************************************************************/
+
+#define DEFAULT_PRIORITY 0
+
+static void 
+_generate_relations (sheet_t *worksheet,
+                     relation_graph_t *today,
+                     member_t *member_list[])
+{
+    int i, j, k, l;
+    char cell[8];
+    bool first = true;
 
     /* Scan each row (members' name) */
-    for (i = _FILED_ROW_START; i < sheet->rows; i++)
+    for (i = _FILED_ROW_START; i < worksheet->rows; i++)
     {
-        int count = 0;
-        bool first = true;
-        adjmatrix_row_t *member = NULL;
+        first = true;
 
         /* Scan each column (time slots) */
         for (j = _FILED_COL_START; j <= _FILED_COL_END; j++)
         {
-            get_cell(sheet, i, j, cell, sizeof(cell));
+            get_cell(worksheet, i, j, cell, sizeof(cell));
 
             if (is_available(cell))
             {
+                relation_t *row = NULL;
+                // member_t *partner = NULL;
+
                 /* If this is the first available slot for this row, allocate a new member */
                 if (first)
                 {
-                    /* Resize the members array if capacity is reached */
-                    if (records->rows >= member_capacity)
-                    {
-                        member_capacity *= 2;
-                        records->members = (adjmatrix_row_t **) realloc(records->members, member_capacity * sizeof(adjmatrix_row_t *));
-                    }
-
                     /* Allocate memory for this member and initialize */
-                    records->members[records->rows] = (adjmatrix_row_t *) malloc(sizeof(adjmatrix_row_t));
-                    member = records->members[records->rows];
+                    row = _new_relation();
+                    row->priority = DEFAULT_PRIORITY;
+                    row->candidates[0] = member_list[i];
+                    row->count = 1;
 
-                    /* Initialize the member data */
-                    member->idx = i;
-                    member->read_order = i;
-                    member->earliest_time = j;
-                    member->availability = 1;
-                    member->count = 0;
-                    member->remain = 1;
-                    records->rows++;
-                    if (is_twice(cell))
-                    {
-                        member->remain = 2;
-                    }
+                    today->count = 1;
+                    today->relations[today->count] = row;
+
                     first = false;
                 }
 
-                /* Update availability and match data */
-                member->availability++;
-
-                /* Search in the same column to find matching rows */
-                for (k = _FILED_ROW_START; k < sheet->rows; k++)
+                /* Search in the same column to find matching count */
+                for (k = _FILED_ROW_START; k < worksheet->rows; k++)
                 {
-                    get_cell(sheet, k, j, cell, sizeof(cell));
+                    get_cell(worksheet, k, j, cell, sizeof(cell));
 
                     /* Check if k has not been added */
-                    for (int l = 0; l < count; l++)
+                    for (l = 0; l < row->count; l++)
                     {
-                        if (member->matches[l] == k)
+                        if (row->candidates[l]->id == k)
                         {
                             break;
                         }
@@ -133,90 +248,141 @@ _generate_matches_graph(sheet_t *sheet, adjmatrix_t *records)
 
                     if (is_available(cell) && k != i)
                     {
-                        if (count >= _MAX_MATCHES_LEN - 1)
+                        if (row->count >= _MAX_MATCHES_LEN - 1)
                         {
                             break;
                         }
-                        member->matches[count++] = k;
+
+                        row->candidates[row->count] = member_list[k];
+                        row->count++;
                     }
                 }
             }
         }
-
-        /* Set the last element of matches to -1 to mark the end, if member was allocated */
-        if (member)
-        {
-            member->matches[count] = -1;
-            member->count = count;
-            records->name_map[member->idx] = sheet->data[i][_FILED_COL_NAME];
-        }
     }
 }
 
-/* TODO: Add time dimension to the pair_result */
-static pair_result_t *
-_pairup_least_availability_first(const adjmatrix_t *graph)
+/* Compare functions for qsort */
+static int
+compare_availability (const void *a,
+                      const void *b)
 {
-    int i, j, count = 0, partner_idx;
-    int remain[_MAX_MATCHES_LEN] = {0};
+    const relation_t *ra = *(const relation_t **)a;
+    const relation_t *rb = *(const relation_t **)b;
+
+    return (ra->candidates[0]->availability -
+            rb->candidates[0]->availability);  // Tie-breaking by priority
+}
+
+static int
+compare_row_count (const void *a,
+               const void *b)
+{
+    const relation_t *ra = *(const relation_t **)a;
+    const relation_t *rb = *(const relation_t **)b;
+
+    return ra->count - rb->count;  // Tie-breaking by priority
+}
+
+static int
+compare_id (const void *a,
+            const void *b)
+{
+    const relation_t *ra = *(const relation_t **)a;
+    const relation_t *rb = *(const relation_t **)b;
+
+    return (ra->candidates[0]->id - rb->candidates[0]->id);
+}
+
+static int
+compare_requests (const void *a,
+                  const void *b)
+{
+    const relation_t *ra = *(const relation_t **)a;
+    const relation_t *rb = *(const relation_t **)b;
+
+    return (ra->candidates[0]->requests - rb->candidates[0]->requests);
+}
+
+static int
+compare_earliest_slot (const void *a,
+                       const void *b)
+{
+    const relation_t *ra = *(const relation_t **)a;
+    const relation_t *rb = *(const relation_t **)b;
+
+    return (ra->candidates[0]->earliest_slot -
+            rb->candidates[0]->earliest_slot);
+}
+
+/* TODO: Add time dimension to the pair_result */
+/* TODO: Sort not only rows but also elements in that row */
+static pair_result_t *
+_pairup_least_availability_first (relation_graph_t *today,
+                                  member_t *members[])
+{
+    /* Initialize the result */
     pair_result_t *result = _new_pair_result(0, 0, 0);
 
-    // Initialize remain array
-    for (i = 0; i < graph->rows; i++)
+    /* Sort the members based on the availability */
+    qsort(today->relations, today->count, sizeof(relation_t *), compare_availability);
+
+    /* Array that records the remaining time requested by each member */
+    int remain[_MAX_MEMBERS_LEN] = { 0 };
+    for (int i = 0; i < today->count; i++)
     {
-        const adjmatrix_row_t *me = graph->members[i];
-        if (me->idx < _MAX_MATCHES_LEN)
-        {
-            remain[me->idx] = me->remain;
-        }
+        remain[i] = today->relations[i]->candidates[0]->requests;
     }
 
-    // Traverse graph for pairing
-    for (i = 0; i < graph->rows; i++)
+    /* Use BFS to pair up the members, starting from the first row */
+    for (int i = 0; i < today->count; i++)
     {
-        const adjmatrix_row_t *me = graph->members[i];
-
-        if (me == NULL || remain[me->idx] == 0) continue; // Skip if unavailable
-        int row_size = me->count;
-
-        for (j = 0; j < row_size; j++)
+        /* If already paired, skip */
+        if (remain[i] == 0)
         {
-            partner_idx = me->matches[j];
-            if (partner_idx < _MAX_MATCHES_LEN && remain[me->idx] > 0 && remain[partner_idx] > 0)
+            break;
+        }
+
+        relation_t *row = today->relations[i];
+        member_t *a = row->candidates[0];
+        member_t *b = NULL;  // To be paired
+
+        /* Pair up the members */
+        for (int j = 1; j < row->count; j++)
+        {
+            if (remain[j] == 0 && row->candidates[j])
             {
-                char *a = _idx_to_name(graph, me->idx);
-                char *b = _idx_to_name(graph, partner_idx);
-
-                if (count < _MAX_MATCHES_LEN)
-                {
-                    strncpy(result->pair_list[count].a, a, MAX_NAME_LEN - 1);
-                    strncpy(result->pair_list[count].b, b, MAX_NAME_LEN - 1);
-                    result->pair_list[count].a[MAX_NAME_LEN - 1] = '\0';
-                    result->pair_list[count].b[MAX_NAME_LEN - 1] = '\0';
-                    count++;
-                }
-
-                remain[me->idx]--;
-                remain[partner_idx]--;
+                continue;
             }
+
+            b = row->candidates[j];
+            remain[i]--;
+            remain[j]--;
+            break;
+        }
+
+        if (a && b)
+        {
+            pair_t *pair = _new_pair();
+            pair->a = a;
+            pair->b = b;
+            result->pair_list[result->pairs++] = pair;
         }
     }
 
-    // Update result metadata
-    result->member = graph->rows;
-    result->pairs = count;
-    result->singles = 0;
-
-    /* Process singles */
-    for (i = 0; i < _MAX_MATCHES_LEN; i++)
+    /* Record the remaining singles */
+    for (int i = 0; i < today->count; i++)
     {
-        if (remain[i] > 0 && result->singles < _MAX_MATCHES_LEN)
+        if (remain[i] != 0)
         {
-            char *name = _idx_to_name(graph, i);
-            strncpy(result->single_list[result->singles], name, MAX_NAME_LEN - 1);
-            result->single_list[result->singles][MAX_NAME_LEN - 1] = '\0';
-            result->singles++;
+            result->single_list[result->singles++] = today->relations[i]->candidates[0];
         }
+    }
+
+    /* Record the member list */
+    for (int i = 0; i < today->count; i++)
+    {
+        result->member_list[result->member++] = today->relations[i]->candidates[0];
     }
 
     return result;
