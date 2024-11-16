@@ -55,7 +55,7 @@ pairup (sheet_t *worksheet)
         }
     }
 
-    _free_relation_graph (graph);
+    // _free_relation_graph (graph);
     return best;
 }
 /***************************  Public Access API  ******************************/
@@ -201,20 +201,22 @@ _generate_relations (sheet_t *worksheet,
     int i, j, k, l;
     char cell[8];
     bool first = true;
+    today->count = 0;
 
     /* Scan each row (members' name) */
     for (i = _FILED_ROW_START; i < worksheet->rows; i++)
     {
         first = true;
+        relation_t *row = NULL;
 
         /* Scan each column (time slots) */
         for (j = _FILED_COL_START; j <= _FILED_COL_END; j++)
         {
             get_cell(worksheet, i, j, cell, sizeof(cell));
+            // printf("get_cell() at row: %d, col: %d. gets %s\n", i, j, cell);
 
             if (is_available(cell))
             {
-                relation_t *row = NULL;
                 // member_t *partner = NULL;
 
                 /* If this is the first available slot for this row, allocate a new member */
@@ -226,8 +228,8 @@ _generate_relations (sheet_t *worksheet,
                     row->candidates[0] = member_list[i];
                     row->count = 1;
 
-                    today->count = 1;
                     today->relations[today->count] = row;
+                    today->count++;
 
                     first = false;
                 }
@@ -235,16 +237,24 @@ _generate_relations (sheet_t *worksheet,
                 /* Search in the same column to find matching count */
                 for (k = _FILED_ROW_START; k < worksheet->rows; k++)
                 {
-                    get_cell(worksheet, k, j, cell, sizeof(cell));
+                    bool already_added = false;
 
                     /* Check if k has not been added */
-                    for (l = 0; l < row->count; l++)
+                    for (l = 1; l < row->count; l++)
                     {
                         if (row->candidates[l]->id == k)
                         {
-                            break;
+                            already_added = true; // Mark as already added
+                            break;                // Exit inner loop
                         }
                     }
+
+                    if (already_added)
+                    {
+                        continue; // Skip the rest of this iteration in the outer loop
+                    }
+
+                    get_cell(worksheet, k, j, cell, sizeof(cell));
 
                     if (is_available(cell) && k != i)
                     {
@@ -315,49 +325,85 @@ compare_earliest_slot (const void *a,
             rb->candidates[0]->earliest_slot);
 }
 
-/* TODO: Add time dimension to the pair_result */
-/* TODO: Sort not only rows but also elements in that row */
-static pair_result_t *
-_pairup_least_availability_first (relation_graph_t *today,
-                                  member_t *members[])
+/* Debug purpose */
+static void
+print_graph (relation_graph_t *graph)
 {
-    /* Initialize the result */
-    pair_result_t *result = _new_pair_result(0, 0, 0);
+    for (int i = 0; i < graph->count; i++)
+    {
+        relation_t *row = graph->relations[i];
+        printf("Relation %d: [ %s ] --> ", i, row->candidates[0]->name);
+        for (int j = 1; j < row->count; j++)
+        {
+            printf("%s --> ", row->candidates[j]->name);
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
 
-    /* Sort the members based on the availability */
-    qsort(today->relations, today->count, sizeof(relation_t *), compare_availability);
+static int
+_find_member_id (relation_graph_t *today,
+                    member_t *member)
+{
+    for (int i = 0; i < today->count; i++)
+    {
+        if (today->relations[i]->candidates[0]->id == member->id)
+        {
+            return i;
+        }
+    }
 
+    return -1;
+}
+
+static void *
+_pairup_bfs (relation_graph_t *today,
+             member_t *members[],
+             pair_result_t *result)
+{
     /* Array that records the remaining time requested by each member */
     int remain[_MAX_MEMBERS_LEN] = { 0 };
+    printf("Original request of each member:\n");
     for (int i = 0; i < today->count; i++)
     {
         remain[i] = today->relations[i]->candidates[0]->requests;
+        printf("Member %s has %d requests\n", today->relations[i]->candidates[0]->name, remain[i]);
     }
 
+    printf("Today's count: %zu\n", today->count);
     /* Use BFS to pair up the members, starting from the first row */
     for (int i = 0; i < today->count; i++)
     {
+        printf("Processing row %d: Member '%s'\n", i, today->relations[i]->candidates[0]->name);
         /* If already paired, skip */
         if (remain[i] == 0)
         {
-            break;
+            continue;
         }
 
         relation_t *row = today->relations[i];
-        member_t *a = row->candidates[0];
+        member_t *a = row->candidates[0];  // himself/herself
         member_t *b = NULL;  // To be paired
 
         /* Pair up the members */
         for (int j = 1; j < row->count; j++)
         {
-            if (remain[j] == 0 && row->candidates[j])
+            int bi = _find_member_id(today, row->candidates[j]);
+
+            printf("    Try pairing with member %s ...... ", today->relations[i]->candidates[j]->name);
+            if (remain[bi] <= 0 || !row->candidates[j])
             {
+                printf("Failed!\n");
                 continue;
             }
 
+            printf("Success!\n");
             b = row->candidates[j];
+
             remain[i]--;
-            remain[j]--;
+            remain[bi]--;
+
             break;
         }
 
@@ -384,6 +430,24 @@ _pairup_least_availability_first (relation_graph_t *today,
     {
         result->member_list[result->member++] = today->relations[i]->candidates[0];
     }
+}
+
+/* TODO: Add time dimension to the pair_result */
+/* TODO: Sort not only rows but also elements in that row */
+static pair_result_t *
+_pairup_least_availability_first (relation_graph_t *today,
+                                  member_t *members[])
+{
+    /* Initialize the result */
+    pair_result_t *result = _new_pair_result(0, 0, 0);
+
+    print_graph(today);
+    /* Sort the members based on the availability */
+    qsort(today->relations, today->count, sizeof(relation_t *), compare_availability);
+    print_graph(today);
+
+    /* Pair up the members */
+    _pairup_bfs (today, members, result);
 
     return result;
 }

@@ -98,6 +98,7 @@ _free_relation (relation_t *r)
         return;
     }
 
+    printf("relation address: %p\n", r);
     free (r);
 }
 
@@ -110,6 +111,7 @@ _new_relation_graph (void)
 void
 _free_relation_graph (relation_graph_t *graph)
 {
+    printf("graph address: %p\n", graph);
     if (!graph)
     {
         return;
@@ -118,6 +120,7 @@ _free_relation_graph (relation_graph_t *graph)
     for (int i = 0; i < graph->count; i++)
     {
         _free_relation (graph->relations[i]);
+        graph->relations[i] = NULL;
     }
 
     free (graph);

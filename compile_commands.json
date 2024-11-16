@@ -2,16 +2,16 @@
   {
     "arguments": [
       "/usr/bin/gcc",
-      "-w",
-      "-g",
+      "-Wall",
       "-Ilib",
+      "-g",
       "-c",
       "-o",
-      "build/main.o",
-      "src/main.c"
+      "build/pairup/pairup-algorithm.o",
+      "src/pairup/pairup-algorithm.c"
     ],
     "directory": "/home/jck/Downloads/gitrepo/pairup",
-    "file": "/home/jck/Downloads/gitrepo/pairup/src/main.c",
-    "output": "/home/jck/Downloads/gitrepo/pairup/build/main.o"
+    "file": "/home/jck/Downloads/gitrepo/pairup/src/pairup/pairup-algorithm.c",
+    "output": "/home/jck/Downloads/gitrepo/pairup/build/pairup/pairup-algorithm.o"
   }
 ]
