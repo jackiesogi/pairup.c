@@ -14,6 +14,10 @@ pairup (sheet_t *sheet);
 int
 _get_random_seed (void);
 
+char *
+_get_time_slot (sheet_t *worksheet,
+                int j);
+
 static char *
 _idx_to_name(const relation_graph_t *today, int id);
 
@@ -25,50 +29,41 @@ _generate_relations (sheet_t *sheet,
 /* Member-availability-based algorithms for probing optimized results */
 /* The member filled with the least/most time slots will be paired up first */
 static pair_result_t *
-_pairup_least_availability_first (relation_graph_t *today,
-                                  member_t *member_list[]);
+_pairup_least_availability_priority (relation_graph_t *today,
+                                     member_t *member_list[]);
 
-// static pair_result_t *
-// _pairup_most_availability_first (relation_graph_t *today,
-//                                  member_t *member_list[]);
+static pair_result_t *
+_pairup_most_availability_priority (relation_graph_t *today,
+                                    member_t *member_list[]);
 
 /* Sheet read-order-based algorithms for probing optimized results */
 /* The member on the top/bottom of the sheet will be paired up first */
 // static pair_result_t *
 // _pairup_random_read_first (const relation_graph_t *today,
 //                            int seed);
-//
-// static pair_result_t *
-// _pairup_first_read_first_serve (relation_graph_t *today,
-//                                 member_t *member_list[]);
-//
-// static pair_result_t *
-// _pairup_last_read_first_serve (relation_graph_t *today,
-//                                member_t *member_list[]);
+
+static pair_result_t *
+_pairup_smallest_row_id_priority (relation_graph_t *today,
+                                  member_t *member_list[]);
+
+static pair_result_t *
+_pairup_largest_row_id_priority (relation_graph_t *today,
+                                 member_t *member_list[]);
 
 /* Time-order-based algorithms for probing optimized results */
 /* The member who has the earliest/latest time slot will be paired up first */
-// static pair_result_t *
-// _pairup_earliest_time_first (relation_graph_t *today,
-//                              member_t *member_list[]);
-//
-// static pair_result_t *
-// _pairup_latest_time_first (relation_graph_t *today,
-//                            member_t *member_list[]);
+static pair_result_t *
+_pairup_earliest_available_slot_priority (relation_graph_t *today,
+                                          member_t *member_list[]);
+
+static pair_result_t *
+_pairup_latest_available_slot_priority (relation_graph_t *today,
+                                        member_t *member_list[]);
 
 typedef pair_result_t *
 (*pairup_fn) (relation_graph_t *today,
               member_t *member_list[]);
 
-#define _MAX_PAIRUP_ALGORITHMS 1 
-const pairup_fn pairup_algorithms[] = {
-    // _pairup_random_read_first,
-    _pairup_least_availability_first,
-    // _pairup_most_availability_first,
-    // _pairup_first_read_first_serve,
-    // _pairup_last_read_first_serve,
-    // _pairup_earliest_time_first,
-    // _pairup_latest_time_first,
-};
+extern const pairup_fn pairup_algorithms[];
 
 #endif  // PAIRUP_ALGORITHM_H

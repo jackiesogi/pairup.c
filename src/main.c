@@ -33,7 +33,7 @@ main(int argc, char *argv[])
         return 1;
     }
 
-    print_result (result);
+    print_result (&sheet, result);
 
     return 0;
 }

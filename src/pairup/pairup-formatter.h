@@ -2,6 +2,7 @@
 #define PAIRUP_FORMATTER_H
 
 #include "pairup-types.h"
+#include "rw-csv.h"
 
 #define GREETING "Enjoy the chat :D"
 
@@ -14,9 +15,10 @@ related to weekly topic. ONLY on Monday can talk about \n\
 your last weekend or sharing something interesting."
 
 void
-print_result (pair_result_t *result);
+print_result (sheet_t *worksheet,
+              pair_result_t *result);
 		   
 void
-print_result_full (pair_result_t *result);
+print_result_statistics (pair_result_t *result);
 
 #endif  // PAIRUP_FORMATTER_H

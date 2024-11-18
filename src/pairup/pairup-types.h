@@ -21,10 +21,10 @@
 struct member
 {
     int    id;                     // Row number on the google sheet
-    char   name[MAX_NAME_LEN];    // Name of the member
-    size_t requests;            // Number of requested practice time
-    size_t availability;        // Number of time slots available
-    int    earliest_slot;             // Earliest time slot on the sheet
+    char   name[MAX_NAME_LEN];     // Name of the member
+    size_t requests;               // Number of requested practice time
+    size_t availability;           // Number of time slots available
+    int    earliest_slot;          // Earliest time slot on the sheet
 };
 
 typedef struct member member_t;
@@ -33,17 +33,20 @@ struct pair
 {
     struct member *a;    // Member A
     struct member *b;    // Member B
+    int time;
 };
 
 typedef struct pair pair_t;
 
 struct relation
 {
-    // struct member *member;  // Member that this row represents
-    // char name[MAX_NAME_LEN];  // Name of the member
-    size_t count;             // Number of candidates for this member
-    int priority;             // Priority of this member
+    size_t count;                                 // Number of candidates for this member
+    int priority;                                 // Priority of this member
+    int matched_slot[_MAX_MATCHES_LEN];           // Matched time slot for this member
     struct member *candidates[_MAX_MATCHES_LEN];  // Candidates for this member
+    
+    int available_slot_count;                     // Number of available time slot for this member
+    int available_slot[_MAX_MATCHES_LEN];         // Available time slot for this member
 };
 
 typedef struct relation relation_t;
@@ -67,7 +70,9 @@ struct pair_result
     int member;
     int singles;
     int pairs;
+    int total_requests;
     
+    int matched_slot[_MAX_MATCHES_LEN];
     member_t *member_list[_MAX_MATCHES_LEN];
     member_t *single_list[_MAX_MATCHES_LEN];
     struct pair *pair_list[_MAX_MATCHES_LEN];
