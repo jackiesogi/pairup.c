@@ -7,81 +7,129 @@
 
 /* Maximum length of the name */
 #define  MAX_NAME_LEN     4096
-#define  MAX_MATCHES_LEN  4096
+// #define  MAX_MATCHES_LEN  4096
+#define  _MAX_MATCHES_LEN  64 
+#define  _MAX_MEMBERS_LEN  64 
 
 /* Boundaries for the sheet that containing real data */
 #define  _FILED_COL_NAME   0 
 #define  _FILED_ROW_START  1
 #define  _FILED_COL_START  2 
 #define  _FILED_COL_END    16
-#define  _MAX_MATCHES_LEN  64 
-#define  _MAX_MEMBERS_LEN  64 
 
-/*********************  New data types  *************************/
+/********************************  Types aliasess  ************************************/
+
+/* Slot */
+typedef int slot;
+
+/* Member */
+typedef struct member member_t;
+typedef struct member member;
+typedef struct member memb;
+
+/* Pair */
+typedef struct pair pair_t;
+typedef struct pair pair;
+
+/* Relation */
+typedef struct relation relation_t;
+typedef struct relation relation;
+
+/* Relation graph */
+typedef struct relation_graph relation_graph_t;
+typedef struct relation_graph relation_graph;
+typedef struct relation_graph graph;
+
+/* Pair result */
+typedef struct pair_result pair_result_t;
+typedef struct pair_result pair_result;
+typedef struct pair_result result;
+
+/**********************************  Data types  **************************************/
+
+/* Member's info and their willingness to practice on that day */
 struct member
 {
-    int    id;                     // Row number on the google sheet
-    char   name[MAX_NAME_LEN];     // Name of the member
-    size_t requests;               // Number of requested practice time
-    size_t availability;           // Number of time slots available
-    int    earliest_slot;          // Earliest time slot on the sheet
+    int    id;                 // Row number on the google sheet
+    char   name[MAX_NAME_LEN]; // Name of the member
+    size_t requests;           // Number of requested practices (0, 1 or 2)
+    size_t availability;       // Number of slots available on that day
+    slot   earliest_slot;      // Earliest time slot on the sheet
 };
 
-typedef struct member member_t;
-
+/* A successful pair will contain two members and a matched time slot */
 struct pair
 {
-    struct member *a;    // Member A
-    struct member *b;    // Member B
-    int time;
+    member *a;           // Member A's information
+    member *b;           // Member B's information
+    slot time;           // Available time slot for a and b
 };
 
-typedef struct pair pair_t;
-
+/* A relation is a member and his/her pairing candidates */
+/* Technically, it's a row in adjacency list representation (See next struct) */
 struct relation
 {
     size_t count;                                 // Number of candidates for this member
-    int priority;                                 // Priority of this member
-    int matched_slot[_MAX_MATCHES_LEN];           // Matched time slot for this member
-    struct member *candidates[_MAX_MATCHES_LEN];  // Candidates for this member
+    member *candidates[_MAX_MATCHES_LEN];         // Candidates for this member
+    slot matched_slot[_MAX_MATCHES_LEN];          // Matched time slot for this member
     
-    int available_slot_count;                     // Number of available time slot for this member
-    int available_slot[_MAX_MATCHES_LEN];         // Available time slot for this member
+    size_t availability;                          // Number of slots available on that day
+    slot available_slot[_MAX_MATCHES_LEN];        // Available time slot for this member
 };
 
-typedef struct relation relation_t;
+// struct host
+// {
+//     member *host;           // Host's information
+//     
 
+/* A graph represents today's matching relations between members */
+/* Technically, it's a graph data type using adjacency list representation */
+/* Adjacency list will be more convinient when using DFS or BFS to walk through the graph */
 struct relation_graph
 {
-    size_t count;   // Number of relations
-    struct relation *relations[_MAX_MATCHES_LEN];  // Relations
+    size_t count;                                  // Number of relations
+    relation *relations[_MAX_MATCHES_LEN];  // Relations
 };
 
-typedef struct relation_graph relation_graph_t;
-
-// For example:
-// today.relations[i].name
-// today.relations[i].candidates[j]
-
-/*********************  New data types  *************************/
-
+/* A pair result contains the successful pairs and the remaining singles */
 struct pair_result
 {
-    int member;
-    int singles;
-    int pairs;
-    int total_requests;
+    size_t member;
+    size_t singles;
+    size_t pairs;
+    size_t total_requests;
     
-    int matched_slot[_MAX_MATCHES_LEN];
-    member_t *member_list[_MAX_MATCHES_LEN];
-    member_t *single_list[_MAX_MATCHES_LEN];
-    struct pair *pair_list[_MAX_MATCHES_LEN];
+    slot matched_slot[_MAX_MATCHES_LEN];
+    member *member_list[_MAX_MATCHES_LEN];
+    member *single_list[_MAX_MATCHES_LEN];
+    pair *pair_list[_MAX_MATCHES_LEN];
 };
 
-typedef struct pair pair_t;
-typedef struct pair_result pair_result_t;
+/* For example: */
+// relation_graph_t today;           --> A graph named 'today'
+// today.relations[i].name;          --> Name of the i-th member in the graph
+// today.relations[i].candidates[j]  --> The j-th candidate of the i-th member
 
-/* Allocator and deallocator for the data types */
+/********************************  Number of practices  *********************************/
+
+extern const char *zero_sign[];
+
+extern const char *once_sign[];
+
+extern const char *twice_sign[];
+
+/**********************************  Helper functions  **********************************/
+
+bool is_zero (const char *sign);
+
+bool is_once (const char *sign);
+
+bool is_twice (const char *sign);
+
+bool is_available (const char *sign);
+
+/****************************  Allocator and Deallocator  ********************************/
+
 member_t *
 _new_member (void);
 
@@ -113,18 +161,6 @@ _new_pair_result (int member,
 
 void
 _free_pair_result (pair_result_t *result);
-
-extern const char *once_sign[];
-
-extern const char *twice_sign[];
-
-bool is_zero (const char *sign);
-
-bool is_once (const char *sign);
-
-bool is_twice (const char *sign);
-
-bool is_available (const char *sign);
 
 #endif  // PAIRUP_TYPES_H
 

@@ -3,6 +3,6 @@ URL="https://docs.google.com/spreadsheets/d/19s78tQZO6-g5ph2sOiKDf1whIAt3fITZpoo
 OUTDIR=$(dirname $0)/data
 OUTPUT="$OUTDIR/$(date +%Y-%m-%d).csv"
 
-mkdir -p $OUTDIR
-curl -s -L -o $OUTPUT "$URL" > /dev/null
-cp -f $OUTPUT data.csv
+mkdir -p "$OUTDIR"
+curl -s -L -o "$OUTPUT" "$URL" > /dev/null
+cp -f "$OUTPUT" data.csv

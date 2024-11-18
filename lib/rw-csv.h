@@ -13,6 +13,8 @@ typedef struct sheet_struct
     char ***data;
 } sheet_t;
 
+typedef sheet_t sheet;
+
 sheet_t
 read_csv (const char *path);
 

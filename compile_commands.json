@@ -7,11 +7,71 @@
       "-g",
       "-c",
       "-o",
+      "build/librwcsv.o",
+      "lib/rw-csv.c"
+    ],
+    "directory": "/home/jck/Downloads/gitrepo/pairup",
+    "file": "/home/jck/Downloads/gitrepo/pairup/lib/rw-csv.c",
+    "output": "/home/jck/Downloads/gitrepo/pairup/build/librwcsv.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Ilib",
+      "-g",
+      "-c",
+      "-o",
+      "build/main.o",
+      "src/main.c"
+    ],
+    "directory": "/home/jck/Downloads/gitrepo/pairup",
+    "file": "/home/jck/Downloads/gitrepo/pairup/src/main.c",
+    "output": "/home/jck/Downloads/gitrepo/pairup/build/main.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Ilib",
+      "-g",
+      "-c",
+      "-o",
       "build/pairup/pairup-algorithm.o",
       "src/pairup/pairup-algorithm.c"
     ],
     "directory": "/home/jck/Downloads/gitrepo/pairup",
     "file": "/home/jck/Downloads/gitrepo/pairup/src/pairup/pairup-algorithm.c",
     "output": "/home/jck/Downloads/gitrepo/pairup/build/pairup/pairup-algorithm.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Ilib",
+      "-g",
+      "-c",
+      "-o",
+      "build/pairup/pairup-formatter.o",
+      "src/pairup/pairup-formatter.c"
+    ],
+    "directory": "/home/jck/Downloads/gitrepo/pairup",
+    "file": "/home/jck/Downloads/gitrepo/pairup/src/pairup/pairup-formatter.c",
+    "output": "/home/jck/Downloads/gitrepo/pairup/build/pairup/pairup-formatter.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Ilib",
+      "-g",
+      "-c",
+      "-o",
+      "build/pairup/pairup-types.o",
+      "src/pairup/pairup-types.c"
+    ],
+    "directory": "/home/jck/Downloads/gitrepo/pairup",
+    "file": "/home/jck/Downloads/gitrepo/pairup/src/pairup/pairup-types.c",
+    "output": "/home/jck/Downloads/gitrepo/pairup/build/pairup/pairup-types.o"
   }
 ]

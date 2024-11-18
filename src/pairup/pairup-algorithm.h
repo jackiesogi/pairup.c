@@ -60,10 +60,28 @@ static pair_result_t *
 _pairup_latest_available_slot_priority (relation_graph_t *today,
                                         member_t *member_list[]);
 
+/* Potential-partner-based algorithms for probing optimized results */
+static pair_result_t *
+_pairup_least_potential_partner (relation_graph_t *today,
+                                 member_t *members[]);
+    
+static pair_result_t *
+_pairup_most_potential_partner (relation_graph_t *today,
+                                member_t *members[]);
+
 typedef pair_result_t *
 (*pairup_fn) (relation_graph_t *today,
               member_t *member_list[]);
 
 extern const pairup_fn pairup_algorithms[];
+
+static void 
+_generate_relations (sheet_t *worksheet,
+                     relation_graph_t *today,
+                     member_t *member_list[]);
+
+static int
+_generate_member_list (sheet_t *worksheet,
+                       member_t *member_list[]);
 
 #endif  // PAIRUP_ALGORITHM_H

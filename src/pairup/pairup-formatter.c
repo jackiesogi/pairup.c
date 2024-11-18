@@ -42,20 +42,20 @@ print_result (sheet_t *worksheet,
 void
 print_result_statistics (pair_result_t *result)
 {
-    int M = result->member;
-    int P = result->pairs;
-    int NP = result->singles;
-    int REQ = result->total_requests;
-    int RATIO_P = (P * 100) / M;
-    int RATIO_NP = (NP * 100) / M;
+    size_t M = result->member;
+    size_t P = result->pairs;
+    size_t NP = result->singles;
+    size_t REQ = result->total_requests;
+    size_t RATIO_P = (P * 100) / M;
+    size_t RATIO_NP = (NP * 100) / M;
 
     printf("=======================  STATISTICS  =======================\n");
-    printf("Number of members today: %d\n", result->member);
-    printf("Number of successful pairs: %d (%d%%)\n", result->pairs, RATIO_P);
-    printf("Number of members not fully paired: %d (%d%%)\n", result->singles, RATIO_NP);
-    printf("Total requests of today %d\n", REQ);
-    printf("Number of fully paired requests %d (%d%%)\n", P * 2, (P * 2 * 100) / REQ);
-    printf("Number of not fully paired requests %d (%d%%)\n", NP, (NP * 100) / REQ);
+    printf("Number of members today: %zu\n", result->member);
+    printf("Number of successful pairs: %zu (%zu%%)\n", result->pairs, RATIO_P);
+    printf("Number of members not fully paired: %zu (%zu%%)\n", result->singles, RATIO_NP);
+    printf("Total requests of today %zu\n", REQ);
+    printf("Number of fully paired requests %zu (%zu%%)\n", P * 2, (P * 2 * 100) / REQ);
+    printf("Number of not fully paired requests %zu (%zu%%)\n", NP, (NP * 100) / REQ);
     printf("Pair list:\n");
     for (int i = 0; i < result->pairs; i++)
     {

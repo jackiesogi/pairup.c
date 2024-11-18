@@ -7,33 +7,29 @@
 int
 main(int argc, char *argv[])
 {
-    sheet_t sheet = read_csv ("data.csv");
+    sheet_t worksheet = read_csv ("data.csv");
 
-    printf("rows: %d\n", sheet.rows);
-    printf("cols: %d\n", sheet.cols);
-    printf("path: %s\n", sheet.path);
-
-    char buf[1024];
-    for (int i = 1; i <= sheet.rows; i++)
-    {
-        for (int j = 1; j <= sheet.cols; j++)
-        {
-            get_cell_from_one(&sheet, i, j, buf, sizeof(buf));
-            printf("%s ", buf);
-        }
-        printf("\n");
-    }
+    printf("rows: %d\n", worksheet.rows);
+    printf("cols: %d\n", worksheet.cols);
+    printf("path: %s\n", worksheet.path);
 
     printf("\nBelow are the pairing results:\n");
 
-    pair_result_t *result = pairup(&sheet);
-    if (!result)
-    {
-        fprintf(stderr, "Pairing operation failed.\n");
-        return 1;
-    }
+    pair_result_t *result = pairup(&worksheet);
 
-    print_result (&sheet, result);
+    print_result (&worksheet, result);
 
     return 0;
 }
+
+
+    // char buf[1024];
+    // for (int i = 1; i <= worksheet.rows; i++)
+    // {
+    //     for (int j = 1; j <= sheet.cols; j++)
+    //     {
+    //         get_cell_from_one(&worksheet, i, j, buf, sizeof(buf));
+    //         printf("%-9s ", buf);
+    //     }
+    //     printf("\n");
+    // }

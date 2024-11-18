@@ -8,49 +8,45 @@
 #include "pairup-formatter.h"
 #include "rw-csv.h"
 
-static void 
-_generate_relations (sheet_t *worksheet,
-                     relation_graph_t *today,
-                     member_t *member_list[]);
-
-static int
-_generate_member_list (sheet_t *worksheet,
-                       member_t *member_list[]);
-
-#define _MAX_PAIRUP_ALGORITHMS 6
-const pairup_fn pairup_algorithms[] = {
-    _pairup_least_availability_priority,
-    _pairup_most_availability_priority,
-    _pairup_smallest_row_id_priority,
-    _pairup_largest_row_id_priority,
-    _pairup_earliest_available_slot_priority,
-    _pairup_latest_available_slot_priority,
+/* Various pre-defined priority */
+/* Technically, `pairup_algorithms[]` is an array with several function pointers */
+/* pointing to corresponding priority functions */
+#define _MAX_PAIRUP_ALGORITHMS 8
+const pairup_fn pairup_algorithms[] = {       // WHO WILL BE PAIRED UP FIRST?
+    _pairup_least_availability_priority,      // Members with least time slots filled in.
+    _pairup_most_availability_priority,       // Members with most time slots filled in.
+    _pairup_smallest_row_id_priority,         // Members on the first row of the sheet.
+    _pairup_largest_row_id_priority,          // Members on the last row of the sheet.
+    _pairup_earliest_available_slot_priority, // Members filled in the earliest available time slot.
+    _pairup_latest_available_slot_priority,   // Members filled in the latest available time slot.
+    _pairup_least_potential_partner,          // Members with least number of potential partners.
+    _pairup_most_potential_partner,           // Members with most number of potential partners.
 };
 
-// const pairup_fn pairup_algorithms[] = {
-//     // _pairup_random_read_first,
-//     _pairup_least_availability_first,
-//     _pairup_most_availability_first,
-//     _pairup_first_read_first_serve,
-//     _pairup_last_read_first_serve,
-//     _pairup_earliest_time_first,
-//     _pairup_latest_time_first,
-// };
+/* Function aliases */
+/* TODO: Rename the functions and remove the aliases */
+static int (*_preprocess_fixed_memblist) (sheet *, member *[]) = _generate_member_list;
+static void (*_preprocess_relation_graph) (sheet *, relation_graph *, member *[]) = _generate_relations;
 
 /***************************  Public Access API  ******************************/
+
+/* The top-level pairup function */
+/* This function will iterate through all the priority functions */
+/* and choose the target result that has maximized matches */
 pair_result_t *
-pairup (sheet_t *worksheet)
+pairup (sheet *worksheet)
 {
-    relation_graph_t *graph = _new_relation_graph();
-    member_t *member_list[_MAX_MEMBERS_LEN] = { NULL };
+    relation_graph *graph = _new_relation_graph();
+    member *member_list[_MAX_MEMBERS_LEN] = { NULL };
 
     /* Generate relations using the existing member_list */
     /* This will take in the empty member_list and fill it with the available members */
-    _generate_member_list (worksheet, member_list);
-    _generate_relations (worksheet, graph, member_list);
+    _preprocess_fixed_memblist (worksheet, member_list);
+    _preprocess_relation_graph (worksheet, graph, member_list);
 
     /* Initialize the best result and temporary result */
-    pair_result_t *best, *temp;
+    result *best;
+    result *temp;
     best = temp = NULL;
     int best_id = -1;
 
@@ -78,23 +74,14 @@ pairup (sheet_t *worksheet)
         }
     }
 
-    // _free_relation_graph (graph);
+    _free_relation_graph (graph);
     printf("Best algorithm: %d\n", best_id);
     return best;
 }
 /***************************  Public Access API  ******************************/
 
-/* Generate random seed based on the current time */
-int
-_get_random_seed (void)
-{
-    time_t now;
-    time (&now);
-    return (int) now;
-}
-
 static int
-_get_member_availability (sheet_t *worksheet,
+_get_member_availability (sheet *worksheet,
                           int id)
 {
     int j, count = 0;
@@ -113,7 +100,7 @@ _get_member_availability (sheet_t *worksheet,
 }
 
 static int
-_get_member_earliest_slot (sheet_t *worksheet,
+_get_member_earliest_slot (sheet *worksheet,
                            int id)
 {
     int j;
@@ -132,7 +119,7 @@ _get_member_earliest_slot (sheet_t *worksheet,
 }
 
 static int
-_get_member_requests (sheet_t *worksheet,
+_get_member_requests (sheet *worksheet,
                       int id)
 {
     int j;
@@ -155,21 +142,21 @@ _get_member_requests (sheet_t *worksheet,
 }
 
 static char *
-_get_member_name (sheet_t *worksheet,
+_get_member_name (sheet *worksheet,
                   int id)
 {
     return worksheet->data[id][_FILED_COL_NAME];
 }
 
 static int
-_generate_member_list (sheet_t *worksheet,
-                       member_t *member_list[])
+_generate_member_list (sheet *worksheet,
+                       member *member_list[])
 {
     int i, count = 0;
 
     for (i = _FILED_ROW_START; i < worksheet->rows; i++)
     {
-        member_t *member = _new_member();
+        member *member = _new_member();
         member->id = i;
         member->requests = _get_member_requests(worksheet, i);
         member->availability = _get_member_availability(worksheet, i);
@@ -188,7 +175,7 @@ _generate_member_list (sheet_t *worksheet,
 }
 
 char *
-_get_time_slot (sheet_t *worksheet,
+_get_time_slot (sheet *worksheet,
                int j)
 {
     return worksheet->data[0][j];
@@ -221,7 +208,7 @@ compare_availability_desc (const void *a,
 
 static int
 compare_row_count_asc (const void *a,
-               const void *b)
+                       const void *b)
 {
     const relation_t *ra = *(const relation_t **)a;
     const relation_t *rb = *(const relation_t **)b;
@@ -231,7 +218,7 @@ compare_row_count_asc (const void *a,
 
 static int
 compare_row_count_desc (const void *a,
-               const void *b)
+                        const void *b)
 {
     const relation_t *ra = *(const relation_t **)a;
     const relation_t *rb = *(const relation_t **)b;
@@ -347,7 +334,7 @@ _find_member_id (relation_graph_t *today,
 #define DEFAULT_PRIORITY 0
 
 static void 
-_generate_relations (sheet_t *worksheet,
+_generate_relations (sheet *worksheet,
                      relation_graph_t *today,
                      member_t *member_list[])
 {
@@ -374,8 +361,7 @@ _generate_relations (sheet_t *worksheet,
                 {
                     /* Allocate memory for this member and initialize */
                     row = _new_relation();
-                    row->priority = DEFAULT_PRIORITY;
-                    row->available_slot_count = 0;
+                    row->availability = 0;
                     row->matched_slot[0] = -1;  // no one will be paired with himself/herself
                     row->candidates[0] = member_list[i];
                     row->count = 1;
@@ -385,8 +371,8 @@ _generate_relations (sheet_t *worksheet,
 
                     first = false;
                 }
-                row->available_slot[row->available_slot_count] = j;
-                row->available_slot_count++;
+                row->available_slot[row->availability] = j;
+                row->availability++;
 
                 /* Search in the same column to find matching count */
                 for (k = _FILED_ROW_START; k < worksheet->rows-1; k++)
@@ -405,7 +391,6 @@ _generate_relations (sheet_t *worksheet,
                         row->count++;
                     }
                 }
-                // printf("row->available_slot_count: %d\n", row->available_slot_count);
             }
         }
     }
@@ -468,7 +453,7 @@ _pairup_bfs (relation_graph_t *today,
     for (int i = 0; i < today->count; i++)
     {
         int rsize = today->relations[i]->count;
-        int asize = today->relations[i]->available_slot_count;
+        int asize = today->relations[i]->availability;
         for (int j = 0; j < rsize; j++)
         {
             matched_slot[i][j] = today->relations[i]->matched_slot[j];
@@ -486,7 +471,7 @@ _pairup_bfs (relation_graph_t *today,
         // for (int i = 0; i < today->count; i++)
         // {
         //     printf("%d ", available_slot[0][0]);
-        //     for (int j = 0; j < today->relations[i]->available_slot_count; j++)
+        //     for (int j = 0; j < today->relations[i]->availability; j++)
         //     {
         //         printf("%d ", available_slot[i][j]);
         //     }
@@ -541,7 +526,7 @@ _pairup_bfs (relation_graph_t *today,
                 //     for (int k = 0; k < today->count; k++)
                 //     {
                 //         printf("    ");
-                //         for (int l = 0; l < today->relations[k]->available_slot_count; l++)
+                //         for (int l = 0; l < today->relations[k]->availability; l++)
                 //         {
                 //             printf("%d ", available_slot[k][l]);
                 //         }
@@ -699,7 +684,7 @@ _pairup_earliest_available_slot_priority (relation_graph_t *today,
 
 static pair_result_t *
 _pairup_latest_available_slot_priority (relation_graph_t *today,
-                                         member_t *members[])
+                                        member_t *members[])
 {
     /* Initialize the result */
     pair_result_t *result = _new_pair_result(0, 0, 0);
@@ -715,4 +700,50 @@ _pairup_latest_available_slot_priority (relation_graph_t *today,
     print_result_statistics(result);
 
     return result;
+}
+
+static pair_result_t *
+_pairup_least_potential_partner (relation_graph_t *today,
+                                 member_t *members[])
+{
+    /* Initialize the result */
+    pair_result_t *result = _new_pair_result(0, 0, 0);
+
+    print_graph(today);
+    /* Sort the members based on the availability */
+    qsort(today->relations, today->count, sizeof(relation_t *), compare_row_count_asc);
+    print_graph(today);
+
+    /* Pair up the members */
+    _pairup_bfs (today, members, result);
+
+    print_result_statistics(result);
+
+    return result;
+}
+
+static pair_result_t *
+_pairup_most_potential_partner (relation_graph_t *today,
+                                member_t *members[])
+{
+    /* Initialize the result */
+    pair_result_t *result = _new_pair_result(0, 0, 0);
+
+    /* Sort the members based on the availability */
+    qsort(today->relations, today->count, sizeof(relation_t *), compare_row_count_desc);
+
+    /* Pair up the members */
+    _pairup_bfs (today, members, result);
+
+    return result;
+}
+
+/************************************  Not used  ***************************************/
+/* Generate random seed based on the current time */
+int
+_get_random_seed (void)
+{
+    time_t now;
+    time (&now);
+    return (int) now;
 }

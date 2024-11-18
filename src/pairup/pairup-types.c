@@ -3,10 +3,17 @@
 #include <stdlib.h>
 #include "pairup-types.h"
 
+/********************************  Number of practices  *********************************/
+
 const char *zero_sign[] = {"0", " "};
+
 const char *once_sign[] = {"1", "V", "v", "X", "x", "once"};
+
 const char *twice_sign[] = {"2", "twice"};
 
+/**********************************  Helper functions  **********************************/
+
+/* Check if the sign represents 'practice zero time' */
 bool is_zero (const char *sign)
 {
     for (int i = 0; i < sizeof(zero_sign) / sizeof(zero_sign[0]); i++)
@@ -19,6 +26,7 @@ bool is_zero (const char *sign)
     return false;
 }
 
+/* Check if the sign represents 'practice one time' */
 bool is_once (const char *sign)
 {
     for (int i = 0; i < sizeof(once_sign) / sizeof(once_sign[0]); i++)
@@ -31,6 +39,7 @@ bool is_once (const char *sign)
     return false;
 }
 
+/* Check if the sign represents 'practice two times' */
 bool is_twice (const char *sign)
 {
     for (int i = 0; i < sizeof(twice_sign) / sizeof(twice_sign[0]); i++)
@@ -43,13 +52,15 @@ bool is_twice (const char *sign)
     return false;
 }
 
+/* Check if the sign represents 'available' */
 bool is_available (const char *sign)
 {
     // return (!is_zero(sign) && (is_once(sign) || is_twice(sign)));
     return (is_once(sign) || is_twice(sign));
 }
 
-/* Allocator and deallocator */
+/****************************  Allocator and Deallocator  ********************************/
+
 member_t *
 _new_member (void)
 {
@@ -97,8 +108,7 @@ _free_relation (relation_t *r)
     {
         return;
     }
-
-    printf("relation address: %p\n", r);
+    // printf("relation address: %p\n", r);
     free (r);
 }
 
@@ -111,7 +121,7 @@ _new_relation_graph (void)
 void
 _free_relation_graph (relation_graph_t *graph)
 {
-    printf("graph address: %p\n", graph);
+    // printf("graph address: %p\n", graph);
     if (!graph)
     {
         return;
