@@ -8,6 +8,12 @@ This program provides a solution to help members in English study group to pair 
 sudo apt-get install build-essential make
 ```
 
+- Clone the repository.
+```bash
+git clone https://github.com/jackiesogi/pairup.c.git
+cd pairup.c
+```
+
 - Run `make` to build the program.
 ```bash
 make
