@@ -15,6 +15,9 @@ related to weekly topic. ONLY on Monday can talk about \n\
 your last weekend or sharing something interesting."
 
 void
+print_worksheet (sheet_t *worksheet);
+
+void
 print_result (sheet_t *worksheet,
               pair_result_t *result);
 		   

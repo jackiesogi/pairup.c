@@ -4,6 +4,112 @@
 #include "pairup-algorithm.h"
 #include "rw-csv.h"
 
+#include <stdio.h>
+#include <string.h>
+#include <wchar.h>
+#include <locale.h>
+
+int
+get_display_width (const char *str)
+{
+    int width = 0;
+    while (*str)
+    {
+        unsigned char c = *str;
+        if (c < 0x80)
+        {
+            width += 1;
+            str++;
+        }
+        else
+        {
+            wchar_t wc;
+            int len = mbtowc(&wc, str, MB_CUR_MAX);
+            if (len > 0)
+            {
+                width += wcwidth(wc); // Calculate the width of the character
+                str += len;           // Skip the character
+            }
+            else
+            {
+                str++;
+            }
+        }
+    }
+    return width;
+}
+
+/* Truncate the string to the maximum width */
+void
+print_truncated (const char *str,
+                 int max_width)
+{
+    int current_width = 0;
+    const char *start = str;
+
+    while (*str && current_width < max_width - 1)
+    {
+        unsigned char c = *str;
+        if (c < 0x80)
+        {
+            current_width += 1;
+            str++;
+        }
+        else
+        {
+            wchar_t wc;
+            int len = mbtowc(&wc, str, MB_CUR_MAX);
+            if (len > 0)
+            {
+                int wc_width = wcwidth(wc);
+                if (current_width + wc_width > max_width - 1) break;
+                current_width += wc_width;
+                str += len;
+            }
+            else
+            {
+                str++; // Invalid character
+            }
+        }
+    }
+
+    /* Print the truncated string */
+    fwrite(start, 1, str - start, stdout);
+
+    /* Fill the remaining space with spaces */
+    for (int i = current_width; i < max_width; i++)
+    {
+        putchar(' ');
+    }
+}
+
+void
+print_worksheet (sheet_t *worksheet)
+{
+    setlocale(LC_CTYPE, "");
+
+    printf("rows: %d\n", worksheet->rows);
+    printf("cols: %d\n", worksheet->cols);
+    printf("path: %s\n", worksheet->path);
+    printf("data:\n");
+    for (int i = 0; i < worksheet->rows; i++)
+    {
+        for (int j = 0; j < worksheet->cols; j++)
+        {
+            char *cell = worksheet->data[i][j];
+            if (cell == NULL)
+            {
+                print_truncated("", 10);
+            }
+            else
+            {
+                print_truncated(cell, 10);
+            }
+        }
+        printf("\n");
+    }
+}
+
 void
 print_result (sheet_t *worksheet,
               pair_result_t *result)
