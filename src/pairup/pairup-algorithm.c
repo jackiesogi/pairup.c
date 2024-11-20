@@ -54,23 +54,38 @@ pairup (sheet *worksheet)
     {
         pairup_fn algorithm = pairup_algorithms[i];
 
-        if (!algorithm)  continue;
+        if (!algorithm) continue;
 
         /* Get the pairing result of current algorithm */
-        temp = algorithm (graph, member_list);
+        temp = algorithm(graph, member_list);
+
+        bool should_update_best = false;
 
         if (!best || temp->pairs > best->pairs)
         {
+            should_update_best = true;
+        }
+        else if (temp->pairs == best->pairs)
+        {
+            int rand = _get_random_seed();
+            if (rand % 2 == 0)
+            {
+                should_update_best = true;
+            }
+        }
+
+        if (should_update_best)
+        {
             if (best)
             {
-                _free_pair_result (best);
+                _free_pair_result(best);
             }
             best = temp;
             best_id = i;
         }
         else
         {
-            _free_pair_result (temp);
+            _free_pair_result(temp);
         }
     }
 
