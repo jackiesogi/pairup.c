@@ -90,7 +90,7 @@ pairup (sheet *worksheet)
     }
 
     _free_relation_graph (graph);
-    printf("Best algorithm: %d\n", best_id);
+    // printf("Best algorithm: %d\n", best_id);
     return best;
 }
 /***************************  Public Access API  ******************************/
@@ -451,15 +451,15 @@ _pairup_bfs (relation_graph_t *today,
     /* Array that records the remaining time requested by each member */
     int remain[_MAX_MEMBERS_LEN] = { 0 };
     int total_requests = 0;
-    printf("Original request of each member:\n");
+    // printf("Original request of each member:\n");
     for (int i = 0; i < today->count; i++)
     {
         int req = today->relations[i]->candidates[0]->requests;
         total_requests += req;
         remain[i] = req;
-        printf("Member %s has %d requests\n",
-                today->relations[i]->candidates[0]->name,
-                remain[i]);
+        // printf("Member %s has %d requests\n",
+                // today->relations[i]->candidates[0]->name,
+                // remain[i]);
     }
 
     int available_slot[_MAX_MATCHES_LEN][_MAX_MATCHES_LEN];
@@ -493,7 +493,7 @@ _pairup_bfs (relation_graph_t *today,
         //     printf("\n");
         // }
 
-        printf("Processing row %d: Member '%s'\n", i, today->relations[i]->candidates[0]->name);
+        // printf("Processing row %d: Member '%s'\n", i, today->relations[i]->candidates[0]->name);
         /* If already paired, skip */
         if (remain[i] == 0)
         {
@@ -525,12 +525,12 @@ _pairup_bfs (relation_graph_t *today,
             //     }
             // }
 
-            printf("    Try pairing with member %s ...... ", today->relations[i]->candidates[j]->name);
+            // printf("    Try pairing with member %s ...... ", today->relations[i]->candidates[j]->name);
             if (remain[bi] <= 0 || 
                 !_has_time_slot(available_slot, bi, matched_slot[i][j]) ||
                 !row->candidates[j])
             {
-                printf("Failed!\n");
+                // printf("Failed!\n");
                 // if (remain[bi] <= 0)
                 // {
                 //     printf("    Member %s has no remaining requests\n", today->relations[i]->candidates[j]->name);
@@ -555,7 +555,7 @@ _pairup_bfs (relation_graph_t *today,
                 continue;
             }
 
-            printf("Success!\n");
+            // printf("Success!\n");
             b = row->candidates[j];
 
             if (a && b)
@@ -604,15 +604,15 @@ _pairup_least_availability_priority (relation_graph_t *today,
     /* Initialize the result */
     pair_result_t *result = _new_pair_result(0, 0, 0);
 
-    print_graph(today);
+    // print_graph(today);
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_availability_asc);
-    print_graph(today);
+    // print_graph(today);
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
 
-    print_result_statistics(result);
+    // print_result_statistics(result);
 
     return result;
 }
@@ -624,15 +624,15 @@ _pairup_most_availability_priority (relation_graph_t *today,
     /* Initialize the result */
     pair_result_t *result = _new_pair_result(0, 0, 0);
 
-    print_graph(today);
+    // print_graph(today);
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_availability_desc);
-    print_graph(today);
+    // print_graph(today);
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
 
-    print_result_statistics(result);
+    // print_result_statistics(result);
 
     return result;
 }
@@ -644,15 +644,15 @@ _pairup_smallest_row_id_priority (relation_graph_t *today,
     /* Initialize the result */
     pair_result_t *result = _new_pair_result(0, 0, 0);
 
-    print_graph(today);
+    // print_graph(today);
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_id_asc);
-    print_graph(today);
+    // print_graph(today);
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
 
-    print_result_statistics(result);
+    // print_result_statistics(result);
 
     return result;
 }
@@ -664,15 +664,15 @@ _pairup_largest_row_id_priority (relation_graph_t *today,
     /* Initialize the result */
     pair_result_t *result = _new_pair_result(0, 0, 0);
 
-    print_graph(today);
+    // print_graph(today);
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_id_desc);
-    print_graph(today);
+    // print_graph(today);
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
 
-    print_result_statistics(result);
+    // print_result_statistics(result);
 
     return result;
 }
@@ -684,15 +684,15 @@ _pairup_earliest_available_slot_priority (relation_graph_t *today,
     /* Initialize the result */
     pair_result_t *result = _new_pair_result(0, 0, 0);
 
-    print_graph(today);
+    // print_graph(today);
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_earliest_slot_asc);
-    print_graph(today);
+    // print_graph(today);
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
 
-    print_result_statistics(result);
+    // print_result_statistics(result);
 
     return result;
 }
@@ -704,15 +704,15 @@ _pairup_latest_available_slot_priority (relation_graph_t *today,
     /* Initialize the result */
     pair_result_t *result = _new_pair_result(0, 0, 0);
 
-    print_graph(today);
+    // print_graph(today);
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_earliest_slot_desc);
-    print_graph(today);
+    // print_graph(today);
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
 
-    print_result_statistics(result);
+    // print_result_statistics(result);
 
     return result;
 }
@@ -724,15 +724,15 @@ _pairup_least_potential_partner (relation_graph_t *today,
     /* Initialize the result */
     pair_result_t *result = _new_pair_result(0, 0, 0);
 
-    print_graph(today);
+    // print_graph(today);
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_row_count_asc);
-    print_graph(today);
+    // print_graph(today);
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
 
-    print_result_statistics(result);
+    // print_result_statistics(result);
 
     return result;
 }

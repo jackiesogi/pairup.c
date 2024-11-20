@@ -9,7 +9,7 @@ BUILD_DIR = build
 
 # 輸出檔案
 LIBRARY = $(BUILD_DIR)/librwcsv.a
-TARGET = main
+TARGET = pairup 
 
 # librwcsv 靜態函式庫的目標和源文件
 LIB_OBJECTS = $(BUILD_DIR)/librwcsv.o
