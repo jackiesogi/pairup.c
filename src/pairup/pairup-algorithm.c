@@ -527,6 +527,7 @@ _pairup_bfs (relation_graph_t *today,
 
             // printf("    Try pairing with member %s ...... ", today->relations[i]->candidates[j]->name);
             if (remain[bi] <= 0 || 
+                !_has_time_slot(available_slot, i, matched_slot[i][j]) ||
                 !_has_time_slot(available_slot, bi, matched_slot[i][j]) ||
                 !row->candidates[j])
             {
