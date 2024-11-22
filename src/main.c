@@ -35,9 +35,9 @@ Generate optimal matches based on member's available time with linear time compl
   -v, --version               print the version information\n\
   -h, --help                  print this page\n\
 Examples:\n\
-  %s '英文讀書會時間 Ver.4.csv'                     # display the optimal matches\n\
-  %s -s '英文讀書會時間 Ver.4.csv'                  # show the csv data only\n\
-  %s -p LAST_ROW '英文讀書會時間 Ver.4.csv'         # match member from the last row\n\
+  %s '英文讀書會時間 Ver.4.csv'              # display the optimal matches\n\
+  %s -s '英文讀書會時間 Ver.4.csv'           # show the csv data only\n\
+  %s -p LAST_ROW '英文讀書會時間 Ver.4.csv'  # match member from the last row\n\
   %s -e 'Bob' '英文讀書會時間 Ver.4.csv'     # match Bob first\n\
 ", program_name, program_name, program_name, program_name, program_name);
     }
