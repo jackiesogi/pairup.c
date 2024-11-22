@@ -443,6 +443,23 @@ _remove_from_available_slot (int available_slot[_MAX_MEMBERS_LEN][_MAX_MEMBERS_L
     }
 }
 
+static int
+_result_existed (pair_result_t *result,
+                member_t *a,
+                member_t *b)
+{
+    for (int i = 0; i < result->pairs; i++)
+    {
+        if (result->pair_list[i]->a == a &&
+            result->pair_list[i]->b == b)
+        {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 static void 
 _pairup_bfs (relation_graph_t *today,
              member_t *members[],
@@ -558,6 +575,11 @@ _pairup_bfs (relation_graph_t *today,
 
             // printf("Success!\n");
             b = row->candidates[j];
+
+            if (_result_existed(result, b, a))
+            {
+                continue;
+            }
 
             if (a && b)
             {
@@ -755,11 +777,17 @@ _pairup_most_potential_partner (relation_graph_t *today,
 }
 
 /************************************  Not used  ***************************************/
-/* Generate random seed based on the current time */
+/* Generate a random integer, ensuring srand is initialized only once */
 int
 _get_random_seed (void)
 {
-    time_t now;
-    time (&now);
-    return (int) now;
+    static int initialized = 0; // Static variable to track initialization
+
+    if (!initialized)
+    {
+        srand((unsigned int)time(NULL));
+        initialized = 1; // Mark as initialized
+    }
+
+    return rand();
 }
