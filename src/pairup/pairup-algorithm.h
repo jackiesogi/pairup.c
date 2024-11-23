@@ -62,11 +62,19 @@ _pairup_latest_available_slot_priority (relation_graph_t *today,
 
 /* Potential-partner-based algorithms for probing optimized results */
 static pair_result_t *
-_pairup_least_potential_partner (relation_graph_t *today,
-                                 member_t *members[]);
+_pairup_least_partner_priority (relation_graph_t *today,
+                                member_t *members[]);
     
 static pair_result_t *
-_pairup_most_potential_partner (relation_graph_t *today,
+_pairup_most_partner_priority (relation_graph_t *today,
+                               member_t *members[]);
+
+static pair_result_t *
+_pairup_least_request_priority (relation_graph_t *today,
+                                member_t *members[]);
+
+static pair_result_t *
+_pairup_most_request_priority (relation_graph_t *today,
                                 member_t *members[]);
 
 typedef pair_result_t *

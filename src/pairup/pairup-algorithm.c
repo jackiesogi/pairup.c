@@ -11,17 +11,23 @@
 /* Various pre-defined priority */
 /* Technically, `pairup_algorithms[]` is an array with several function pointers */
 /* pointing to corresponding priority functions */
-#define _MAX_PAIRUP_ALGORITHMS 8
-const pairup_fn pairup_algorithms[] = {       // WHO WILL BE PAIRED UP FIRST?
-    _pairup_least_availability_priority,      // Members with least time slots filled in.
-    _pairup_most_availability_priority,       // Members with most time slots filled in.
-    _pairup_smallest_row_id_priority,         // Members on the first row of the sheet.
-    _pairup_largest_row_id_priority,          // Members on the last row of the sheet.
-    _pairup_earliest_available_slot_priority, // Members filled in the earliest available time slot.
-    _pairup_latest_available_slot_priority,   // Members filled in the latest available time slot.
-    _pairup_least_potential_partner,          // Members with least number of potential partners.
-    _pairup_most_potential_partner,           // Members with most number of potential partners.
+#define _MAX_PAIRUP_ALGORITHMS 10
+const pairup_fn pairup_algorithms[] = {        // WHO WILL BE PAIRED UP FIRST?
+    _pairup_least_availability_priority,       // Members with least time slots filled in.
+    _pairup_most_availability_priority,        // Members with most time slots filled in.
+    _pairup_smallest_row_id_priority,          // Members on the first row of the sheet.
+    _pairup_largest_row_id_priority,           // Members on the last row of the sheet.
+    _pairup_earliest_available_slot_priority,  // Members filled in the earliest available time slot.
+    _pairup_least_request_priority,            // Members with 'one' request.
+    _pairup_latest_available_slot_priority,    // Members filled in the latest available time slot.
+    _pairup_least_partner_priority,            // Members with least number of potential partners.
+    _pairup_most_partner_priority,             // Members with most number of potential partners.
+    _pairup_most_request_priority,             // Members with 'two' requests.
 };
+
+/* Member in ensure list are guaranteed to be paired up (if there is potential partners) */
+// member_t * ensure_list[_MAX_MEMBERS_LEN] = { NULL };
+// size_t ensure_count = 0;
 
 /* Function aliases */
 /* TODO: Rename the functions and remove the aliases */
@@ -216,7 +222,7 @@ _get_time_slot (sheet *worksheet,
 /* Compare functions for qsort */
 static int
 compare_availability_asc (const void *a,
-                      const void *b)
+                          const void *b)
 {
     const relation_t *ra = *(const relation_t **)a;
     const relation_t *rb = *(const relation_t **)b;
@@ -227,7 +233,7 @@ compare_availability_asc (const void *a,
 
 static int
 compare_availability_desc (const void *a,
-                      const void *b)
+                          const void *b)
 {
     const relation_t *ra = *(const relation_t **)a;
     const relation_t *rb = *(const relation_t **)b;
@@ -258,7 +264,7 @@ compare_row_count_desc (const void *a,
 
 static int
 compare_id_asc (const void *a,
-            const void *b)
+                const void *b)
 {
     const relation_t *ra = *(const relation_t **)a;
     const relation_t *rb = *(const relation_t **)b;
@@ -268,7 +274,7 @@ compare_id_asc (const void *a,
 
 static int
 compare_id_desc (const void *a,
-            const void *b)
+                 const void *b)
 {
     const relation_t *ra = *(const relation_t **)a;
     const relation_t *rb = *(const relation_t **)b;
@@ -278,7 +284,7 @@ compare_id_desc (const void *a,
 
 static int
 compare_requests_asc (const void *a,
-                  const void *b)
+                      const void *b)
 {
     const relation_t *ra = *(const relation_t **)a;
     const relation_t *rb = *(const relation_t **)b;
@@ -288,7 +294,7 @@ compare_requests_asc (const void *a,
 
 static int
 compare_requests_desc (const void *a,
-                  const void *b)
+                       const void *b)
 {
     const relation_t *ra = *(const relation_t **)a;
     const relation_t *rb = *(const relation_t **)b;
@@ -298,7 +304,7 @@ compare_requests_desc (const void *a,
 
 static int
 compare_earliest_slot_asc (const void *a,
-                       const void *b)
+                           const void *b)
 {
     const relation_t *ra = *(const relation_t **)a;
     const relation_t *rb = *(const relation_t **)b;
@@ -309,7 +315,7 @@ compare_earliest_slot_asc (const void *a,
 
 static int
 compare_earliest_slot_desc (const void *a,
-                       const void *b)
+                            const void *b)
 {
     const relation_t *ra = *(const relation_t **)a;
     const relation_t *rb = *(const relation_t **)b;
@@ -317,6 +323,25 @@ compare_earliest_slot_desc (const void *a,
     return (rb->candidates[0]->earliest_slot -
             ra->candidates[0]->earliest_slot);
 }
+
+// static int
+// compare_ensure_list_asc (const void *a,
+//                          const void *b)
+// {
+//     /* A is in ensure list but b isn't */
+//     for (int i = 0; i < ensure_count; i++)
+//     {
+//         if (ensure_list[i] == *(member_t **)a)
+//         {
+//             return -1;
+//         }
+//         if (ensure_list[i] == *(member_t **)b)
+//         {
+//             return 1;
+//         }
+//     }
+//     return 0;
+// }
 
 /* TODO: Record the modified time and implement this function */
 static int
@@ -630,7 +655,6 @@ _pairup_bfs (relation_graph_t *today,
     }
 }
 
-/* TODO: Add time dimension to the pair_result */
 /* TODO: Sort not only rows but also elements in that row */
 static pair_result_t *
 _pairup_least_availability_priority (relation_graph_t *today,
@@ -753,8 +777,8 @@ _pairup_latest_available_slot_priority (relation_graph_t *today,
 }
 
 static pair_result_t *
-_pairup_least_potential_partner (relation_graph_t *today,
-                                 member_t *members[])
+_pairup_least_partner_priority (relation_graph_t *today,
+                                member_t *members[])
 {
     /* Initialize the result */
     pair_result_t *result = _new_pair_result(0, 0, 0);
@@ -773,8 +797,8 @@ _pairup_least_potential_partner (relation_graph_t *today,
 }
 
 static pair_result_t *
-_pairup_most_potential_partner (relation_graph_t *today,
-                                member_t *members[])
+_pairup_most_partner_priority (relation_graph_t *today,
+                               member_t *members[])
 {
     /* Initialize the result */
     pair_result_t *result = _new_pair_result(0, 0, 0);
@@ -790,3 +814,38 @@ _pairup_most_potential_partner (relation_graph_t *today,
     return result;
 }
 
+static pair_result_t *
+_pairup_least_request_priority (relation_graph_t *today,
+                                member_t *members[])
+{
+    /* Initialize the result */
+    pair_result_t *result = _new_pair_result(0, 0, 0);
+
+    /* Sort the members based on the availability */
+    qsort(today->relations, today->count, sizeof(relation_t *), compare_requests_asc);
+
+    log_message (DEBUG_INFO, (debug_fn)print_graph, (void*)today);
+
+    /* Pair up the members */
+    _pairup_bfs (today, members, result);
+
+    return result;
+}
+
+static pair_result_t *
+_pairup_most_request_priority (relation_graph_t *today,
+                               member_t *members[])
+{
+    /* Initialize the result */
+    pair_result_t *result = _new_pair_result(0, 0, 0);
+
+    /* Sort the members based on the availability */
+    qsort(today->relations, today->count, sizeof(relation_t *), compare_requests_desc);
+
+    log_message (DEBUG_INFO, (debug_fn)print_graph, (void*)today);
+
+    /* Pair up the members */
+    _pairup_bfs (today, members, result);
+
+    return result;
+}
