@@ -119,18 +119,25 @@ get_token (FILE *stream,
     return token;
 }
 
+/* Get the number of rows in the file */
 int
 _get_rcount (FILE *file)
 {
     int count = 0;
     char ch;
-    
+    int has_content = 0;
+
     while ((ch = fgetc(file)) != EOF) {
+        has_content = 1;
         if (ch == '\n') {
             count++;
         }
     }
-    
+
+    if (has_content && ch != '\n') {
+        count++;
+    }
+
     fseek(file, 0, SEEK_SET);
     return count;
 }
