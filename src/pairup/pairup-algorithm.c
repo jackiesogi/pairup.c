@@ -25,16 +25,12 @@ const pairup_fn pairup_algorithms[] = {        // WHO WILL BE PAIRED UP FIRST?
     _pairup_most_request_priority,             // Members with 'two' requests.
 };
 
-/* Member in ensure list are guaranteed to be paired up (if there is potential partners) */
-// member_t * ensure_list[_MAX_MEMBERS_LEN] = { NULL };
-// size_t ensure_count = 0;
-
 /* Function aliases */
 /* TODO: Rename the functions and remove the aliases */
 static int (*_preprocess_fixed_memblist) (sheet *, member *[]) = _generate_member_list;
 static void (*_preprocess_relation_graph) (sheet *, relation_graph *, member *[]) = _generate_relations;
 
-/***************************  Public Access API  ******************************/
+/***************************  TOP LEVEL API (START)  ******************************/
 
 /* The top-level pairup function */
 /* This function will iterate through all the priority functions */
@@ -99,7 +95,7 @@ pairup (sheet *worksheet)
     // printf("Best algorithm: %d\n", best_id);
     return best;
 }
-/***************************  Public Access API  ******************************/
+/***************************  TOP LEVEL API (END)  ******************************/
 
 /* Generate a random integer, ensuring srand is initialized only once */
 int
@@ -536,18 +532,6 @@ _pairup_bfs (relation_graph_t *today,
     /* Use BFS to pair up the members, starting from the first row */
     for (int i = 0; i < today->count; i++)
     {
-        /* print the available_slot */
-        // for (int i = 0; i < today->count; i++)
-        // {
-        //     printf("%d ", available_slot[0][0]);
-        //     for (int j = 0; j < today->relations[i]->availability; j++)
-        //     {
-        //         printf("%d ", available_slot[i][j]);
-        //     }
-        //     printf("\n");
-        // }
-
-        // printf("Processing row %d: Member '%s'\n", i, today->relations[i]->candidates[0]->name);
         /* If already paired, skip */
         if (remain[i] == 0)
         {
@@ -563,54 +547,15 @@ _pairup_bfs (relation_graph_t *today,
         for (j = 1; j < row->count; j++)
         {
             int bi = _find_member_id(today, row->candidates[j]);
-            // printf("    Found member %s with id %d at column %d in this row\n", today->relations[i]->candidates[j]->name, bi, j);
-            // printf("    The two member is trying the time slot at %d\n", row->matched_slot[j]);
-            // printf("    The two member is trying the time slot at %d\n", matched_slot[i][j]);
 
-            // int rbi = -1;
-            // /* Find the row index of the b index */
-            // for (int k = 0; k < today->count; k++)
-            // {
-            //     if (today->relations[k]->candidates[0]->id == bi)
-            //     {
-            //         rbi = k;
-            //         printf("    Found member %s at row %d\n", today->relations[k]->candidates[0]->name, rbi);
-            //         break;
-            //     }
-            // }
-
-            // printf("    Try pairing with member %s ...... ", today->relations[i]->candidates[j]->name);
             if (remain[bi] <= 0 || 
                 !_has_time_slot(available_slot, i, matched_slot[i][j]) ||
                 !_has_time_slot(available_slot, bi, matched_slot[i][j]) ||
                 !row->candidates[j])
             {
-                // printf("Failed!\n");
-                // if (remain[bi] <= 0)
-                // {
-                //     printf("    Member %s has no remaining requests\n", today->relations[i]->candidates[j]->name);
-                // }
-                // if (_has_time_slot(available_slot, bi, available_slot[i][j]))
-                // {
-                //     printf("    Member %s has already been paired with someone else at this time\n", today->relations[i]->candidates[j]->name);
-                //     for (int k = 0; k < today->count; k++)
-                //     {
-                //         printf("    ");
-                //         for (int l = 0; l < today->relations[k]->availability; l++)
-                //         {
-                //             printf("%d ", available_slot[k][l]);
-                //         }
-                //         printf("\n");
-                //     }
-                // }
-                // if (!row->candidates[j])
-                // {
-                //     printf("    Member %s address is NULL\n", today->relations[i]->candidates[j]->name);
-                // }
                 continue;
             }
 
-            // printf("Success!\n");
             b = row->candidates[j];
 
             if (_result_existed(result, b, a))

@@ -7,7 +7,7 @@ This program provides a solution to help members in English study group to pair 
 
 - Install the required packages.
 ```bash
-sudo apt-get install build-essential make
+sudo apt-get install build-essential make git
 ```
 
 - Clone the repository.

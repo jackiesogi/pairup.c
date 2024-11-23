@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "pairup/pairup-formatter.h"
 #include "pairup/pairup.h"
 #include "rw-csv.h"
 
@@ -27,19 +26,22 @@ usage (int status)
     {
         printf ("\
 Usage: %s [OPTION]... SOURCE_CSV\n\
-Generate optimal matches based on member's available time with linear time complexity\n\
-\n\
+Generate optimal matches based on member's available time with linear time complexity\n\n\
+Options:\n\
   -s, --show-csv              show the csv data only (no pair result)\n\
   -e, --ensure={MEMBER}       ensure specified member can have partner today\n\
   -d, --debug={LEVEL}         set the debug level (0: only error, 5: all info)\n\
   -p, --priority={FUNC}       specify the match priority algorithm\n\
   -v, --version               print the version information\n\
-  -h, --help                  print this page\n\
+  -h, --help                  print this page\n\n\
 Examples:\n\
   %s '英文讀書會時間 Ver.4.csv'              # display the optimal matches\n\
   %s -s '英文讀書會時間 Ver.4.csv'           # show the csv data only\n\
   %s -p LAST_ROW '英文讀書會時間 Ver.4.csv'  # match member from the last row\n\
-  %s -e 'Bob' '英文讀書會時間 Ver.4.csv'     # match Bob first\n\
+  %s -e 'Bob' '英文讀書會時間 Ver.4.csv'     # match Bob first\n\n\
+Note:\n\
+  You can run `./get_today_google_sheet.sh` script to auto download\n\
+  the latest google sheet data to the csv file (saved as `data.csv`)\n\
 ", program_name, program_name, program_name, program_name, program_name);
     }
     exit (status);
@@ -60,13 +62,7 @@ static struct option const long_options[] =
 int
 main(int argc, char *argv[])
 {
-    // sheet_t worksheet = read_csv ("data.csv");
-    // print_worksheet(&worksheet);
-    //
-    // pair_result_t *result = pairup(&worksheet);
-    //
-    // print_result (&worksheet, result);
-
+    /* Flags for command line arguments */
     bool show_csv = false;
     bool ensure = false;
     bool priority = false;
@@ -85,9 +81,13 @@ main(int argc, char *argv[])
                 break;
             case 'e':
                 ensure = true;
+                printf("Not implemented yet\n");
+                exit(EXIT_FAILURE);
                 break;
             case 'p':
                 priority = true;
+                printf("Not implemented yet\n");
+                exit(EXIT_FAILURE);
                 break;
             case 'v':
                 printf ("Version 0.1\n");
@@ -112,6 +112,7 @@ main(int argc, char *argv[])
     /* Additional non-option arguments is the input file */
     char *path = argv[optind];
 
+    /* Read the csv file */
     sheet_t worksheet = read_csv (path);
 
     if (show_csv)
@@ -120,8 +121,10 @@ main(int argc, char *argv[])
         return 0;
     }
     
+    /* Trigger the top-level pairup function */
     pair_result_t *result = pairup(&worksheet);
 
+    /* Print the result */
     print_result (&worksheet, result);
 
     return 0;
