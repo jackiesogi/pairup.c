@@ -126,7 +126,7 @@ print_result (sheet_t *worksheet,
         {
             pair_t *pair = result->pair_list[i];
             char *time = _get_time_slot(worksheet, pair->time);
-            printf("%s -- %s (%s)\n", pair->a->name, pair->b->name, time);
+            printf("@%s -- @%s (%s)\n", pair->a->name, pair->b->name, time);
         }
     }
     
@@ -138,7 +138,7 @@ print_result (sheet_t *worksheet,
         for (int i = 0; i < result->singles; i++)
         {
             member_t *member = result->single_list[i];
-            printf("%s\n", member->name);
+            printf("@%s\n", member->name);
         }
     }
 
