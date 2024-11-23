@@ -24,4 +24,21 @@ print_result (sheet_t *worksheet,
 void
 print_result_statistics (pair_result_t *result);
 
+/* Debug levels */
+#define DEBUG_NONE     0
+#define DEBUG_ERROR    1
+#define DEBUG_WARNING  2
+#define DEBUG_SUMMARY  3
+#define DEBUG_INFO     4
+#define DEBUG_ALL      5
+
+extern int debug_level;
+
+typedef void (*debug_fn)(void *context);
+
+void
+log_message (int level,
+             debug_fn fptr,
+             void *context);
+
 #endif  // PAIRUP_FORMATTER_H

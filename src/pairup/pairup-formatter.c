@@ -1,3 +1,4 @@
+#include <stdarg.h>
 #include <stdio.h>
 #include "pairup-formatter.h"
 #include "pairup-types.h"
@@ -173,4 +174,43 @@ print_result_statistics (pair_result_t *result)
         printf("%s\n", result->single_list[i]->name);
     }
     printf("=============================================================\n");
+}
+
+int debug_level = DEBUG_NONE;
+
+// void
+// log_message (int level,
+//              const char *message)
+// {
+//     if (level <= debug_level)
+//     {
+//         switch (level)
+//         {
+//             case DEBUG_ERROR:
+//                 fprintf(stderr, "[ERROR] %s\n", message);
+//                 break;
+//             case DEBUG_WARNING:
+//                 fprintf(stderr, "[WARNING] %s\n", message);
+//                 break;
+//             case DEBUG_INFO:
+//                 fprintf(stdout, "[INFO] %s\n", message);
+//                 break;
+//         }
+//     }
+// }
+
+/* Debug function */
+void
+log_message (int level,
+             debug_fn fptr,
+             void *context)
+{
+    if (level > debug_level)
+    {
+        return;
+    }
+    if (fptr != NULL)
+    {
+        fptr (context);
+    }
 }

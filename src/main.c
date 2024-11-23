@@ -31,6 +31,7 @@ Generate optimal matches based on member's available time with linear time compl
 \n\
   -s, --show-csv              show the csv data only (no pair result)\n\
   -e, --ensure={MEMBER}       ensure specified member can have partner today\n\
+  -d, --debug={LEVEL}         set the debug level (0: only error, 5: all info)\n\
   -p, --priority={FUNC}       specify the match priority algorithm\n\
   -v, --version               print the version information\n\
   -h, --help                  print this page\n\
@@ -44,12 +45,13 @@ Examples:\n\
     exit (status);
 }
 
-static char const short_options[] = "se:p:vh";
+static char const short_options[] = "d:se:p:vh";
 
 static struct option const long_options[] =
 {
     {"show-csv", no_argument, NULL, 's'},
     {"priority", required_argument, NULL, 'p'},
+    {"debug", required_argument, NULL, 'd'},
     {"version", no_argument, NULL, 'v'},
     {"help", no_argument, NULL, 'h'},
     {NULL, 0, NULL, 0}
@@ -75,6 +77,9 @@ main(int argc, char *argv[])
     {
         switch (c)
         {
+            case 'd':
+                debug_level = atoi(optarg);
+                break;
             case 's':
                 show_csv = true;
                 break;

@@ -1,6 +1,6 @@
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
 #include <time.h>
 
 #include "pairup-algorithm.h"
@@ -94,6 +94,21 @@ pairup (sheet *worksheet)
     return best;
 }
 /***************************  Public Access API  ******************************/
+
+/* Generate a random integer, ensuring srand is initialized only once */
+int
+_get_random_seed (void)
+{
+    static int initialized = 0; // Static variable to track initialization
+
+    if (!initialized)
+    {
+        srand((unsigned int)time(NULL));
+        initialized = 1; // Mark as initialized
+    }
+
+    return rand();
+}
 
 static int
 _get_member_availability (sheet *worksheet,
@@ -310,11 +325,8 @@ compare_first_modified_asc ()
     return 0;
 }
 
-// static int
-// compare
-
 /* Debug purpose */
-static void
+void
 print_graph (relation_graph_t *graph)
 {
     for (int i = 0; i < graph->count; i++)
@@ -627,15 +639,15 @@ _pairup_least_availability_priority (relation_graph_t *today,
     /* Initialize the result */
     pair_result_t *result = _new_pair_result(0, 0, 0);
 
-    // print_graph(today);
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_availability_asc);
-    // print_graph(today);
+
+    log_message (DEBUG_INFO, (debug_fn)print_graph, (void*)today);
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
 
-    // print_result_statistics(result);
+    log_message (DEBUG_SUMMARY, (debug_fn)print_result_statistics, (void*)result);
 
     return result;
 }
@@ -647,15 +659,15 @@ _pairup_most_availability_priority (relation_graph_t *today,
     /* Initialize the result */
     pair_result_t *result = _new_pair_result(0, 0, 0);
 
-    // print_graph(today);
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_availability_desc);
-    // print_graph(today);
+
+    log_message (DEBUG_INFO, (debug_fn)print_graph, (void*)today);
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
 
-    // print_result_statistics(result);
+    log_message (DEBUG_SUMMARY, (debug_fn)print_result_statistics, (void*)result);
 
     return result;
 }
@@ -667,15 +679,15 @@ _pairup_smallest_row_id_priority (relation_graph_t *today,
     /* Initialize the result */
     pair_result_t *result = _new_pair_result(0, 0, 0);
 
-    // print_graph(today);
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_id_asc);
-    // print_graph(today);
+
+    log_message (DEBUG_INFO, (debug_fn)print_graph, (void*)today);
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
 
-    // print_result_statistics(result);
+    log_message (DEBUG_SUMMARY, (debug_fn)print_result_statistics, (void*)result);
 
     return result;
 }
@@ -687,15 +699,15 @@ _pairup_largest_row_id_priority (relation_graph_t *today,
     /* Initialize the result */
     pair_result_t *result = _new_pair_result(0, 0, 0);
 
-    // print_graph(today);
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_id_desc);
-    // print_graph(today);
+
+    log_message (DEBUG_INFO, (debug_fn)print_graph, (void*)today);
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
 
-    // print_result_statistics(result);
+    log_message (DEBUG_SUMMARY, (debug_fn)print_result_statistics, (void*)result);
 
     return result;
 }
@@ -707,15 +719,15 @@ _pairup_earliest_available_slot_priority (relation_graph_t *today,
     /* Initialize the result */
     pair_result_t *result = _new_pair_result(0, 0, 0);
 
-    // print_graph(today);
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_earliest_slot_asc);
-    // print_graph(today);
+
+    log_message (DEBUG_INFO, (debug_fn)print_graph, (void*)today);
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
 
-    // print_result_statistics(result);
+    log_message (DEBUG_SUMMARY, (debug_fn)print_result_statistics, (void*)result);
 
     return result;
 }
@@ -727,15 +739,15 @@ _pairup_latest_available_slot_priority (relation_graph_t *today,
     /* Initialize the result */
     pair_result_t *result = _new_pair_result(0, 0, 0);
 
-    // print_graph(today);
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_earliest_slot_desc);
-    // print_graph(today);
+
+    log_message (DEBUG_INFO, (debug_fn)print_graph, (void*)today);
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
 
-    // print_result_statistics(result);
+    log_message (DEBUG_SUMMARY, (debug_fn)print_result_statistics, (void*)result);
 
     return result;
 }
@@ -747,15 +759,15 @@ _pairup_least_potential_partner (relation_graph_t *today,
     /* Initialize the result */
     pair_result_t *result = _new_pair_result(0, 0, 0);
 
-    // print_graph(today);
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_row_count_asc);
-    // print_graph(today);
+
+    log_message (DEBUG_INFO, (debug_fn)print_graph, (void*)today);
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
 
-    // print_result_statistics(result);
+    log_message (DEBUG_SUMMARY, (debug_fn)print_result_statistics, (void*)result);
 
     return result;
 }
@@ -770,24 +782,11 @@ _pairup_most_potential_partner (relation_graph_t *today,
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_row_count_desc);
 
+    log_message (DEBUG_INFO, (debug_fn)print_graph, (void*)today);
+
     /* Pair up the members */
     _pairup_bfs (today, members, result);
 
     return result;
 }
 
-/************************************  Not used  ***************************************/
-/* Generate a random integer, ensuring srand is initialized only once */
-int
-_get_random_seed (void)
-{
-    static int initialized = 0; // Static variable to track initialization
-
-    if (!initialized)
-    {
-        srand((unsigned int)time(NULL));
-        initialized = 1; // Mark as initialized
-    }
-
-    return rand();
-}
