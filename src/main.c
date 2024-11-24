@@ -53,6 +53,7 @@ static struct option const long_options[] =
 {
     {"show-csv", no_argument, NULL, 's'},
     {"priority", required_argument, NULL, 'p'},
+    {"ensure", required_argument, NULL, 'e'},
     {"debug", required_argument, NULL, 'd'},
     {"version", no_argument, NULL, 'v'},
     {"help", no_argument, NULL, 'h'},
