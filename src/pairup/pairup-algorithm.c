@@ -95,6 +95,28 @@ pairup (sheet *worksheet)
     // printf("Best algorithm: %d\n", best_id);
     return best;
 }
+
+relation_graph_t *
+pairup_graph (sheet *worksheet)
+{
+    relation_graph *graph = _new_relation_graph();
+    member *member_list[_MAX_MEMBERS_LEN] = { NULL };
+
+    /* Generate relations using the existing member_list */
+    /* This will take in the empty member_list and fill it with the available members */
+    _preprocess_fixed_memblist (worksheet, member_list);
+    _preprocess_relation_graph (worksheet, graph, member_list);
+
+    pairup_fn algorithm = pairup_algorithms[0];
+
+    if (!algorithm) return NULL;
+
+    /* Get the pairing result of current algorithm */
+    algorithm(graph, member_list);
+
+    // printf("Best algorithm: %d\n", best_id);
+    return graph;
+}
 /***************************  TOP LEVEL API (END)  ******************************/
 
 /* Generate a random integer, ensuring srand is initialized only once */
@@ -610,6 +632,8 @@ _pairup_least_availability_priority (relation_graph_t *today,
 
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_availability_asc);
+
+    // print_graph(today);
 
     log_message (DEBUG_INFO, (debug_fn)print_graph, (void*)today);
 

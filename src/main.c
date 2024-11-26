@@ -29,6 +29,7 @@ Usage: %s [OPTION]... SOURCE_CSV\n\
 Generate optimal matches based on member's available time with linear time complexity\n\n\
 Options:\n\
   -s, --show-csv              show the csv data only (no pair result)\n\
+  -g, --graph                 generate the relation graph\n\
   -e, --ensure={MEMBER}       ensure specified member can have partner today\n\
   -d, --debug={LEVEL}         set the debug level (0: only error, 5: all info)\n\
   -p, --priority={FUNC}       specify the match priority algorithm\n\
@@ -47,11 +48,12 @@ Note:\n\
     exit (status);
 }
 
-static char const short_options[] = "d:se:p:vh";
+static char const short_options[] = "d:sge:p:vh";
 
 static struct option const long_options[] =
 {
     {"show-csv", no_argument, NULL, 's'},
+    {"graph", no_argument, NULL, 'g'},
     {"priority", required_argument, NULL, 'p'},
     {"ensure", required_argument, NULL, 'e'},
     {"debug", required_argument, NULL, 'd'},
@@ -67,6 +69,7 @@ main(int argc, char *argv[])
     bool show_csv = false;
     bool ensure = false;
     bool priority = false;
+    bool generate_graph = false;
 
     /* Parse the command line arguments using while loop */
     int c;
@@ -76,6 +79,9 @@ main(int argc, char *argv[])
         {
             case 'd':
                 debug_level = atoi(optarg);
+                break;
+            case 'g':
+                generate_graph = true;
                 break;
             case 's':
                 show_csv = true;
@@ -116,6 +122,11 @@ main(int argc, char *argv[])
     /* Read the csv file */
     sheet_t worksheet = read_csv (path);
 
+    if (generate_graph)
+    {
+        print_graph_to_file(&worksheet, "relations.dot");
+        return 0;
+    }
     if (show_csv)
     {
         print_worksheet(&worksheet);
