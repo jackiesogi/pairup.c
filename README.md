@@ -3,6 +3,15 @@ This program provides a solution to help members in English study group to pair 
 
 ![Thumbnail](./img/thumbnail.png)
 
+## Features
+### Show the pair result
+
+![](./img/result.png)
+
+### Show the relation graph
+
+![](./img/graph.png)
+
 ## How to build (Ubuntu 22.04)
 
 - Install the required packages.
