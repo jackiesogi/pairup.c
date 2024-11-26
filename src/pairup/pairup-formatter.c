@@ -112,6 +112,141 @@ print_worksheet (sheet_t *worksheet)
 }
 
 void
+print_graph_to_file(sheet_t *worksheet, const char *filename)
+{
+    FILE *file = fopen(filename, "w");
+    if (file == NULL)
+    {
+        fprintf(stderr, "Error: cannot open file %s\n", filename);
+        return;
+    }
+
+    fprintf(file, "graph G { \n  size=\"6,4\";\n  ratio=fill;\n");
+
+    relation_graph_t *graph = pairup_graph(worksheet);
+    if (graph == NULL)
+    {
+        fprintf(stderr, "Error: failed to generate graph\n");
+        fclose(file);
+        return;
+    }
+
+    fprintf(file, "  // Node attributes\n");
+    for (size_t i = 0; i < graph->count; i++)
+    {
+        relation_t *relation = graph->relations[i];
+        member *member = relation->candidates[0];
+
+        fprintf(file, "  \"%s\" [label=\"%s: %zu\"];\n",
+                member->name, member->name, member->requests);
+    }
+
+    fprintf(file, "  // Edges\n");
+    typedef struct {
+        char *node1;
+        char *node2;
+        slot time;
+    } edge_t;
+    edge_t *printed_edges = (edge_t *)malloc(graph->count * sizeof(edge_t));
+    int printed_count = 0;
+
+    for (size_t i = 0; i < graph->count; i++)
+    {
+        relation_t *relation = graph->relations[i];
+        member *source = relation->candidates[0];
+
+        for (size_t j = 1; j < relation->count; j++)
+        {
+            member *target = relation->candidates[j];
+            slot time = relation->matched_slot[j];
+
+            int is_duplicate = 0;
+            for (int k = 0; k < printed_count; k++)
+            {
+                if ((strcmp(printed_edges[k].node1, source->name) == 0 &&
+                     strcmp(printed_edges[k].node2, target->name) == 0) ||
+                    (strcmp(printed_edges[k].node1, target->name) == 0 &&
+                     strcmp(printed_edges[k].node2, source->name) == 0))
+                {
+                    is_duplicate = 1;
+                    break;
+                }
+            }
+
+            if (!is_duplicate)
+            {
+                char *timestr = _get_time_slot(worksheet, time);
+                fprintf(file, "  \"%s\" -- \"%s\" [label=\"%s\"];\n",
+                        source->name, target->name, timestr);
+
+                printed_edges[printed_count].node1 = source->name;
+                printed_edges[printed_count].node2 = target->name;
+                printed_edges[printed_count].time = time;
+                printed_count++;
+            }
+        }
+    }
+
+    fprintf(file, "}\n");
+
+    fclose(file);
+    free(printed_edges);
+
+    printf("Graph has been written to %s\n", filename);
+
+    _free_relation_graph(graph);
+}
+
+void
+print_digraph_to_file(sheet_t *worksheet, const char *filename)
+{
+    FILE *file = fopen(filename, "w");
+    if (file == NULL)
+    {
+        fprintf(stderr, "Error: cannot open file %s\n", filename);
+        return;
+    }
+
+    fprintf(file, "digraph G { \n  size=\"6,4\";\n  ratio=fill;\n");
+
+    relation_graph_t *graph = pairup_graph(worksheet);
+    if (graph == NULL)
+    {
+        fprintf(stderr, "Error: failed to generate graph\n");
+        fclose(file);
+        return;
+    }
+
+    int i, j;
+    for (i = 0; i < graph->count; i++)
+    {
+        relation_t *relation = graph->relations[i];
+
+        char *source = relation->candidates[0]->name;
+
+        if (relation->count == 1)
+        {
+            fprintf(file, "  \"%s\";\n", source);
+            continue;
+        }
+
+        for (j = 1; j < relation->count; j++)
+        {
+            char *target = relation->candidates[j]->name;
+            fprintf(file, "  \"%s\" -> \"%s\";\n", source, target);
+        }
+    }
+
+    fprintf(file, "}\n");
+
+    fclose(file);
+
+    printf("Graph has been written to %s\n", filename);
+
+    _free_relation_graph(graph);
+}
+
+void
 print_result (sheet_t *worksheet,
               pair_result_t *result)
 {

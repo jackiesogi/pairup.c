@@ -20,6 +20,10 @@ print_worksheet (sheet_t *worksheet);
 void
 print_result (sheet_t *worksheet,
               pair_result_t *result);
+
+void
+print_graph_to_file (sheet_t *worksheet,
+                     const char *filename);
 		   
 void
 print_result_statistics (pair_result_t *result);

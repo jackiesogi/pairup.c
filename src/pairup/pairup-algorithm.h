@@ -10,6 +10,9 @@
 pair_result_t *
 pairup (sheet_t *sheet);
 
+relation_graph_t *
+pairup_graph (sheet *worksheet);
+
 /* Generate random seed based on the current time */
 int
 _get_random_seed (void);
