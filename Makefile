@@ -23,8 +23,18 @@ PAIRUP_OBJECTS = $(PAIRUP_SOURCES:$(SRC_DIR)/pairup/%.c=$(BUILD_DIR)/pairup/%.o)
 SRC_OBJECTS = $(BUILD_DIR)/main.o
 SRC_SOURCES = $(SRC_DIR)/main.c
 
+# version.h 的目標
+VERSION_FILE = $(SRC_DIR)/version.h
+
 # 編譯所有
-all: $(TARGET)
+all: $(VERSION_FILE) $(TARGET)
+
+# 生成 version.h
+$(VERSION_FILE):
+	echo "#ifndef VERSION_H" > $@
+	echo "#define VERSION_H" >> $@
+	echo "#define PROGRAM_VERSION \"version 1.0.0.$(shell date +%Y%m%d) (nightly build)\"" >> $@
+	echo "#endif  // VERSION_H" >> $@
 
 # 生成靜態函式庫
 $(LIBRARY): $(LIB_OBJECTS)
@@ -52,4 +62,5 @@ $(TARGET): $(LIBRARY) $(SRC_OBJECTS) $(PAIRUP_OBJECTS)
 
 # 清理生成的檔案
 clean:
-	rm -rf $(BUILD_DIR) $(TARGET)
+	rm -rf $(BUILD_DIR) $(TARGET) $(VERSION_FILE)
+

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include "pairup/pairup.h"
+#include "version.h"
 #include "rw-csv.h"
 
 const char *program_name = "pairup";
@@ -114,7 +115,7 @@ main(int argc, char *argv[])
                 exit(EXIT_FAILURE);
                 break;
             case 'v':
-                printf ("Version 0.1\n");
+                printf ("%s\n", PROGRAM_VERSION);
                 return 0;
             case 'h':
                 usage (EXIT_SUCCESS);
