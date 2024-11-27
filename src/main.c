@@ -151,7 +151,7 @@ main(int argc, char *argv[])
     }
 
     /* Trigger the top-level pairup function */
-    pair_result_t *result = pairup(&worksheet, &x);
+    pair_result_t *result = pairup(&worksheet);
 
     /* Print the result */
     print_result (&worksheet, result);
