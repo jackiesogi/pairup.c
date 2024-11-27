@@ -48,7 +48,7 @@ print_truncated (const char *str,
     int current_width = 0;
     const char *start = str;
 
-    while (*str && current_width < max_width - 1)
+    while (*str && current_width < max_width)
     {
         unsigned char c = *str;
         if (c < 0x80)
@@ -63,7 +63,7 @@ print_truncated (const char *str,
             if (len > 0)
             {
                 int wc_width = wcwidth(wc);
-                if (current_width + wc_width > max_width - 1) break;
+                if (current_width + wc_width > max_width) break;
                 current_width += wc_width;
                 str += len;
             }
@@ -77,43 +77,114 @@ print_truncated (const char *str,
     /* Print the truncated string */
     fwrite(start, 1, str - start, stdout);
 
-    /* Fill the remaining space with spaces */
-    for (int i = current_width; i < max_width; i++)
+    /* Use ANSI escape to move cursor and fill remaining spaces */
+    if (current_width < max_width)
     {
-        putchar(' ');
+        printf("\033[%dC", max_width - current_width); // Move cursor right
     }
 }
 
 void
 print_worksheet (sheet_t *worksheet)
 {
-    setlocale(LC_CTYPE, "");
+    setlocale(LC_CTYPE, ""); // Set locale for wide character support
+
+    const int default_col_width = 10; // Default column width
+    const int special_col_width = 14; // Special column width
 
     printf("rows: %d\n", worksheet->rows);
     printf("cols: %d\n", worksheet->cols);
     printf("path: %s\n", worksheet->path);
     printf("data:\n");
+
     for (int i = 0; i < worksheet->rows; i++)
     {
         for (int j = 0; j < worksheet->cols; j++)
         {
             char *cell = worksheet->data[i][j];
-            if (cell == NULL)
+            int is_special_col = (j == _FILED_COL_NAME || j == _FILED_COL_END + 1);
+            int is_field_col = (j >= _FILED_COL_START && j <= _FILED_COL_END && i >= _FILED_ROW_START);
+
+            if (is_field_col)
             {
-                print_truncated("", 10);
+                printf("    "); // Bold text
+                print_truncated(cell ? cell : "", default_col_width - 4);
+                continue;
             }
-            else
-            {
-                print_truncated(cell, 10);
-            }
+
+            int col_width = is_special_col ? special_col_width : default_col_width;
+            print_truncated(cell ? cell : "", col_width);
         }
         printf("\n");
     }
 }
 
-void
-print_graph_to_file(sheet_t *worksheet, const char *filename)
+int
+calculate_dpi (int line_count)
 {
+    int base_dpi = 72;
+    int max_dpi = 600;
+    int threshold = 200;
+
+    if (line_count >= threshold)
+        return max_dpi;
+
+    return base_dpi + (max_dpi - base_dpi) * line_count / threshold;
+}
+
+int
+count_lines (const char *filename)
+{
+    FILE *file = fopen(filename, "r");
+    if (!file)
+    {
+        perror("Error opening file");
+        return 0;
+    }
+
+    int lines = 0;
+    char ch;
+    while ((ch = fgetc(file)) != EOF)
+    {
+        if (ch == '\n')
+            lines++;
+    }
+
+    fclose(file);
+    return lines;
+}
+
+void
+generate_graph_output_image(sheet_t *worksheet,
+                            const char *filename)
+{
+    char dotfile[1024];
+    strcpy(dotfile, filename);
+    strcat(dotfile, ".dot");
+
+    print_graph_to_file(worksheet, dotfile);
+
+    int line_count = count_lines(dotfile);
+    int dpi = calculate_dpi(line_count);
+
+    char command[2048];
+    snprintf(command, sizeof(command), "dot -Tpng -Gdpi=%d %s -o %s", dpi, dotfile, filename);
+
+    int ret = system(command);
+
+    if (ret != 0)
+    {
+        fprintf(stderr, "Error: failed to generate graph image\n");
+        return;
+    }
+    printf("Graph image has been generated to %s\n", filename);
+}
+
+void
+print_graph_to_file (sheet_t *worksheet,
+                     const char *filename)
+{
+    printf("Output: %s\n", filename);
     FILE *file = fopen(filename, "w");
     if (file == NULL)
     {
@@ -121,7 +192,9 @@ print_graph_to_file(sheet_t *worksheet, const char *filename)
         return;
     }
 
-    fprintf(file, "graph G { \n  size=\"6,4\";\n  ratio=fill;\n");
+    fprintf(file, "graph G {\n");
+    fprintf(file,"    /* File attributes */\n");
+    fprintf(file,"    size=\"6,4\";\n    ratio=fill;\n");
 
     relation_graph_t *graph = pairup_graph(worksheet);
     if (graph == NULL)
@@ -131,23 +204,39 @@ print_graph_to_file(sheet_t *worksheet, const char *filename)
         return;
     }
 
-    fprintf(file, "  // Node attributes\n");
+    fprintf(file, "\n    /* Node attributes */\n");
     for (size_t i = 0; i < graph->count; i++)
     {
         relation_t *relation = graph->relations[i];
         member *member = relation->candidates[0];
 
-        fprintf(file, "  \"%s\" [label=\"%s: %zu\"];\n",
+        fprintf(file, "    \"%s\" [label=\"%s: %zu\"];\n",
                 member->name, member->name, member->requests);
     }
 
-    fprintf(file, "  // Edges\n");
+    fprintf(file, "\n    /* Edge relations */\n");
+
+    size_t edge_count = 0;
+    for (size_t i = 0; i < graph->count; i++)
+    {
+        relation_t *relation = graph->relations[i];
+        edge_count += (relation->count - 1);
+    }
+
     typedef struct {
         char *node1;
         char *node2;
         slot time;
     } edge_t;
-    edge_t *printed_edges = (edge_t *)malloc(graph->count * sizeof(edge_t));
+
+    edge_t *printed_edges = (edge_t *)malloc(edge_count * sizeof(edge_t));
+    if (!printed_edges)
+    {
+        fprintf(stderr, "Error: failed to allocate memory for edges\n");
+        fclose(file);
+        return;
+    }
+
     int printed_count = 0;
 
     for (size_t i = 0; i < graph->count; i++)
@@ -176,7 +265,7 @@ print_graph_to_file(sheet_t *worksheet, const char *filename)
             if (!is_duplicate)
             {
                 char *timestr = _get_time_slot(worksheet, time);
-                fprintf(file, "  \"%s\" -- \"%s\" [label=\"%s\"];\n",
+                fprintf(file, "    \"%s\" -- \"%s\" [label=\"%s\" fontsize=7];\n",
                         source->name, target->name, timestr);
 
                 printed_edges[printed_count].node1 = source->name;
@@ -190,6 +279,7 @@ print_graph_to_file(sheet_t *worksheet, const char *filename)
     fprintf(file, "}\n");
 
     fclose(file);
+
     free(printed_edges);
 
     printf("Graph has been written to %s\n", filename);
@@ -198,7 +288,8 @@ print_graph_to_file(sheet_t *worksheet, const char *filename)
 }
 
 void
-print_digraph_to_file(sheet_t *worksheet, const char *filename)
+print_digraph_to_file (sheet_t *worksheet,
+                       const char *filename)
 {
     FILE *file = fopen(filename, "w");
     if (file == NULL)

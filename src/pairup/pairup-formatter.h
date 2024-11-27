@@ -22,9 +22,16 @@ print_result (sheet_t *worksheet,
               pair_result_t *result);
 
 void
+generate_graph_output_image (sheet_t *worksheet,
+                             const char *filename);
+
+void
 print_graph_to_file (sheet_t *worksheet,
                      const char *filename);
-		   
+void
+print_digraph_to_file (sheet_t *worksheet,
+                     const char *filename);
+
 void
 print_result_statistics (pair_result_t *result);
 

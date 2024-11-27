@@ -110,6 +110,18 @@ struct pair_result
 // today.relations[i].name;          --> Name of the i-th member in the graph
 // today.relations[i].candidates[j]  --> The j-th candidate of the i-th member
 
+struct pairup_options
+{
+    bool show_csv;
+    bool generate_graph;
+    char graph_output[1024];
+    bool ensure;
+    char ensure_member[1024];
+    bool priority;
+    char priority_func[1024];
+    int debug_level;
+};
+
 /********************************  Number of practices  *********************************/
 
 extern const char *zero_sign[];
@@ -129,6 +141,9 @@ bool is_twice (const char *sign);
 bool is_available (const char *sign);
 
 /****************************  Allocator and Deallocator  ********************************/
+
+void
+pairup_options_init (struct pairup_options *x);
 
 member_t *
 _new_member (void);

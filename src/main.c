@@ -29,7 +29,7 @@ Usage: %s [OPTION]... SOURCE_CSV\n\
 Generate optimal matches based on member's available time with linear time complexity\n\n\
 Options:\n\
   -s, --show-csv              show the csv data only (no pair result)\n\
-  -g, --graph                 generate the relation graph\n\
+  -g, --graph={OUTPUT}        generate the relation graph\n\
   -e, --ensure={MEMBER}       ensure specified member can have partner today\n\
   -d, --debug={LEVEL}         set the debug level (0: only error, 5: all info)\n\
   -p, --priority={FUNC}       specify the match priority algorithm\n\
@@ -48,12 +48,20 @@ Note:\n\
     exit (status);
 }
 
-static char const short_options[] = "d:sge:p:vh";
+bool
+has_installed_graphviz()
+{
+    if (system("which dot > /dev/null") == 0)
+        return true;
+    return false;
+}
+
+static char const short_options[] = "d:sg::e:p:vh";
 
 static struct option const long_options[] =
 {
     {"show-csv", no_argument, NULL, 's'},
-    {"graph", no_argument, NULL, 'g'},
+    {"graph", optional_argument, NULL, 'g'},
     {"priority", required_argument, NULL, 'p'},
     {"ensure", required_argument, NULL, 'e'},
     {"debug", required_argument, NULL, 'd'},
@@ -66,10 +74,9 @@ int
 main(int argc, char *argv[])
 {
     /* Flags for command line arguments */
-    bool show_csv = false;
-    bool ensure = false;
-    bool priority = false;
-    bool generate_graph = false;
+    struct pairup_options x;
+    pairup_options_init(&x);
+    char graph_output[1024];
 
     /* Parse the command line arguments using while loop */
     int c;
@@ -78,21 +85,31 @@ main(int argc, char *argv[])
         switch (c)
         {
             case 'd':
+                x.debug_level = atoi(optarg);
                 debug_level = atoi(optarg);
                 break;
             case 'g':
-                generate_graph = true;
+                if (!has_installed_graphviz())
+                {
+                    fprintf(stderr, "Please install package `graphviz` first\n");
+                    exit(EXIT_FAILURE);
+                }
+                x.generate_graph = true;
+                if (optarg)
+                    strcpy(graph_output, (const char *)optarg);
+                else
+                    strcpy(graph_output, "relations.png");
                 break;
             case 's':
-                show_csv = true;
+                x.show_csv = true;
                 break;
             case 'e':
-                ensure = true;
+                x.ensure = true;
                 printf("Not implemented yet\n");
                 exit(EXIT_FAILURE);
                 break;
             case 'p':
-                priority = true;
+                x.priority = true;
                 printf("Not implemented yet\n");
                 exit(EXIT_FAILURE);
                 break;
@@ -122,19 +139,19 @@ main(int argc, char *argv[])
     /* Read the csv file */
     sheet_t worksheet = read_csv (path);
 
-    if (generate_graph)
+    if (x.generate_graph)
     {
-        print_graph_to_file(&worksheet, "relations.dot");
+        generate_graph_output_image(&worksheet, graph_output);
         return 0;
     }
-    if (show_csv)
+    if (x.show_csv)
     {
         print_worksheet(&worksheet);
         return 0;
     }
-    
+
     /* Trigger the top-level pairup function */
-    pair_result_t *result = pairup(&worksheet);
+    pair_result_t *result = pairup(&worksheet, &x);
 
     /* Print the result */
     print_result (&worksheet, result);

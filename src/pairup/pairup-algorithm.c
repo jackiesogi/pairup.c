@@ -488,9 +488,10 @@ _remove_from_available_slot (int available_slot[_MAX_MEMBERS_LEN][_MAX_MEMBERS_L
                              int row,
                              int value)
 {
-    for (int i = 0; i < _MAX_MEMBERS_LEN; i++)
+    int i;
+    for (i = 0; i < _MAX_MEMBERS_LEN; i++)
     {
-        if (available_slot[row][i] == value)
+        if (available_slot && available_slot[row][i] == value)
         {
             available_slot[row][i] = -1;
             // printf("Remove %d from row %d\n", value, row);

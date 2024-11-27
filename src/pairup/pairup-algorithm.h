@@ -95,4 +95,7 @@ static int
 _generate_member_list (sheet_t *worksheet,
                        member_t *member_list[]);
 
+void
+print_graph (relation_graph_t *graph);
+
 #endif  // PAIRUP_ALGORITHM_H
