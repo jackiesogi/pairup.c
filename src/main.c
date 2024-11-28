@@ -39,12 +39,11 @@ Options:\n\
 Examples:\n\
   %s '英文讀書會時間 Ver.4.csv'              # display the optimal matches\n\
   %s -s '英文讀書會時間 Ver.4.csv'           # show the csv data only\n\
+  %s -g '英文讀書會時間 Ver.4.csv'           # generate 'relations.png' pairing graph\n\
   %s -p LAST_ROW '英文讀書會時間 Ver.4.csv'  # match member from the last row\n\
   %s -e 'Bob' '英文讀書會時間 Ver.4.csv'     # match Bob first\n\n\
-Note:\n\
-  You can run `./get_today_google_sheet.sh` script to auto download\n\
-  the latest google sheet data to the csv file (saved as `data.csv`)\n\
-", program_name, program_name, program_name, program_name, program_name);
+For more information, see <https://github.com/jackiesogi/pairup.c>.\n\
+", program_name, program_name, program_name, program_name, program_name, program_name);
     }
     exit (status);
 }
