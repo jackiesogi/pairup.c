@@ -33,7 +33,8 @@ all: $(VERSION_FILE) $(TARGET)
 $(VERSION_FILE):
 	echo "#ifndef VERSION_H" > $@
 	echo "#define VERSION_H" >> $@
-	echo "#define PROGRAM_VERSION \"version 1.0.0.$(shell date +%Y%m%d) (nightly build)\"" >> $@
+	echo "/* Program version format: version <major>.<minor>.<patch> */" >> $@
+	echo "#define PROGRAM_VERSION \"version 1.0.$(shell git log --pretty=format:%h -n 1) ($(shell date +%Y-%m-%d) nightly build)\"" >> $@
 	echo "#endif  // VERSION_H" >> $@
 
 # 生成靜態函式庫
