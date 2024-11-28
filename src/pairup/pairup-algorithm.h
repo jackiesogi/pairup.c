@@ -80,11 +80,8 @@ static pair_result_t *
 _pairup_most_request_priority (relation_graph_t *today,
                                 member_t *members[]);
 
-typedef pair_result_t *
-(*pairup_fn) (relation_graph_t *today,
-              member_t *member_list[]);
 
-extern const pairup_fn pairup_algorithms[];
+extern const algorithm pairup_algorithms[];
 
 static void 
 _generate_relations (sheet_t *worksheet,
@@ -96,6 +93,6 @@ _generate_member_list (sheet_t *worksheet,
                        member_t *member_list[]);
 
 void
-print_graph (relation_graph_t *graph);
+print_graph (void *context);
 
 #endif  // PAIRUP_ALGORITHM_H

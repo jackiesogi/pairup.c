@@ -12,17 +12,47 @@
 /* Technically, `pairup_algorithms[]` is an array with several function pointers */
 /* pointing to corresponding priority functions */
 #define _MAX_PAIRUP_ALGORITHMS 10
-const pairup_fn pairup_algorithms[] = {        // WHO WILL BE PAIRED UP FIRST?
-    _pairup_least_availability_priority,       // Members with least time slots filled in.
-    _pairup_most_availability_priority,        // Members with most time slots filled in.
-    _pairup_smallest_row_id_priority,          // Members on the first row of the sheet.
-    _pairup_largest_row_id_priority,           // Members on the last row of the sheet.
-    _pairup_earliest_available_slot_priority,  // Members filled in the earliest available time slot.
-    _pairup_least_request_priority,            // Members with 'one' request.
-    _pairup_latest_available_slot_priority,    // Members filled in the latest available time slot.
-    _pairup_least_partner_priority,            // Members with least number of potential partners.
-    _pairup_most_partner_priority,             // Members with most number of potential partners.
-    _pairup_most_request_priority,             // Members with 'two' requests.
+const pairup_algorithm_t pairup_algorithms[] = {  // WHO WILL BE PAIRED UP FIRST?
+    {
+        "LEAST_AVAILABILITY_PRIORITY",            // Members with least time slots filled in.
+         _pairup_least_availability_priority
+    },
+    {
+        "MOST_AVAILABILITY_PRIORITY",             // Members with most time slots filled in.
+        _pairup_most_availability_priority
+    },
+    {
+        "SMALLEST_ROW_ID_PRIORITY",               // Members on the first row of the sheet.
+        _pairup_smallest_row_id_priority
+    },
+    {
+        "LARGEST_ROW_ID_PRIORITY",                // Members on the last row of the sheet.
+        _pairup_largest_row_id_priority
+    },
+    {
+        "EARLIEST_AVAILABLE_SLOT_PRIORITY",       // Members with the earliest time slot.
+        _pairup_earliest_available_slot_priority
+    },
+    {
+        "LEAST_REQUEST_PRIORITY",                 // Members with 'one' requests.
+        _pairup_least_request_priority
+    },
+    {
+        "LATEST_AVAILABLE_SLOT_PRIORITY",         // Members with the latest time slot.
+        _pairup_latest_available_slot_priority
+    },
+    {
+        "LEAST_PARTNER_PRIORITY",                 // Members with the least number of potential partners.
+        _pairup_least_partner_priority
+    },
+    {
+        "MOST_PARTNER_PRIORITY",                  // Members with the most number of potentail partners.
+        _pairup_most_partner_priority
+    },
+    {
+        "MOST_REQUEST_PRIORITY",                  // Members with 'two' requests.
+        _pairup_most_request_priority
+    },
 };
 
 /* Function aliases */
@@ -54,7 +84,7 @@ pairup (sheet *worksheet)
 
     for (int i = 0; i < _MAX_PAIRUP_ALGORITHMS; i++)
     {
-        pairup_fn algorithm = pairup_algorithms[i];
+        pairup_internal algorithm = pairup_algorithms[i].algorithm;
 
         if (!algorithm) continue;
 
@@ -91,8 +121,13 @@ pairup (sheet *worksheet)
         }
     }
 
+    log_message (DEBUG_SUMMARY, NULL, NULL, "Best Algorithm: %s", pairup_algorithms[best_id].name);
+    log_message (DEBUG_SUMMARY, (callback)print_result_statistics, (void*)best, NULL);
+    log_message (DEBUG_SUMMARY, NULL, NULL, "Relation Graph:", NULL);
+    log_message (DEBUG_SUMMARY, (callback)print_graph, (void*)graph, NULL);
+
     _free_relation_graph (graph);
-    // printf("Best algorithm: %d\n", best_id);
+
     return best;
 }
 
@@ -107,7 +142,7 @@ pairup_graph (sheet *worksheet)
     _preprocess_fixed_memblist (worksheet, member_list);
     _preprocess_relation_graph (worksheet, graph, member_list);
 
-    pairup_fn algorithm = pairup_algorithms[0];
+    pairup_internal algorithm = pairup_algorithms[0].algorithm;
 
     if (!algorithm) return NULL;
 
@@ -370,8 +405,10 @@ compare_first_modified_asc ()
 
 /* Debug purpose */
 void
-print_graph (relation_graph_t *graph)
+print_graph (void *context)
 {
+    relation_graph_t *graph = (relation_graph_t *)context;
+
     for (int i = 0; i < graph->count; i++)
     {
         relation_t *row = graph->relations[i];
@@ -634,14 +671,12 @@ _pairup_least_availability_priority (relation_graph_t *today,
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_availability_asc);
 
-    // print_graph(today);
-
-    log_message (DEBUG_INFO, (debug_fn)print_graph, (void*)today);
+    log_message (DEBUG_INFO, (callback)print_graph, (void*)today, "Displaying relation graph...\n");
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
 
-    log_message (DEBUG_SUMMARY, (debug_fn)print_result_statistics, (void*)result);
+    log_message (DEBUG_INFO, (callback)print_result_statistics, (void*)result, "Displaying result statistics...\n");
 
     return result;
 }
@@ -656,12 +691,12 @@ _pairup_most_availability_priority (relation_graph_t *today,
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_availability_desc);
 
-    log_message (DEBUG_INFO, (debug_fn)print_graph, (void*)today);
+    log_message (DEBUG_INFO, (callback)print_graph, (void*)today, "Displaying relation graph...\n");
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
 
-    log_message (DEBUG_SUMMARY, (debug_fn)print_result_statistics, (void*)result);
+    log_message (DEBUG_INFO, (callback)print_result_statistics, (void*)result, "Displaying result statistics...\n");
 
     return result;
 }
@@ -676,12 +711,12 @@ _pairup_smallest_row_id_priority (relation_graph_t *today,
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_id_asc);
 
-    log_message (DEBUG_INFO, (debug_fn)print_graph, (void*)today);
+    log_message (DEBUG_INFO, (callback)print_graph, (void*)today, "Displaying relation graph...\n");
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
 
-    log_message (DEBUG_SUMMARY, (debug_fn)print_result_statistics, (void*)result);
+    log_message (DEBUG_INFO, (callback)print_result_statistics, (void*)result, "Displaying result statistics...\n");
 
     return result;
 }
@@ -696,12 +731,12 @@ _pairup_largest_row_id_priority (relation_graph_t *today,
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_id_desc);
 
-    log_message (DEBUG_INFO, (debug_fn)print_graph, (void*)today);
+    log_message (DEBUG_INFO, (callback)print_graph, (void*)today, "Displaying relation graph...\n");
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
 
-    log_message (DEBUG_SUMMARY, (debug_fn)print_result_statistics, (void*)result);
+    log_message (DEBUG_INFO, (callback)print_result_statistics, (void*)result, "Displaying result statistics...\n");
 
     return result;
 }
@@ -716,12 +751,12 @@ _pairup_earliest_available_slot_priority (relation_graph_t *today,
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_earliest_slot_asc);
 
-    log_message (DEBUG_INFO, (debug_fn)print_graph, (void*)today);
+    log_message (DEBUG_INFO, (callback)print_graph, (void*)today, "Displaying relation graph...\n");
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
 
-    log_message (DEBUG_SUMMARY, (debug_fn)print_result_statistics, (void*)result);
+    log_message (DEBUG_INFO, (callback)print_result_statistics, (void*)result, "Displaying result statistics...\n");
 
     return result;
 }
@@ -736,12 +771,12 @@ _pairup_latest_available_slot_priority (relation_graph_t *today,
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_earliest_slot_desc);
 
-    log_message (DEBUG_INFO, (debug_fn)print_graph, (void*)today);
+    log_message (DEBUG_INFO, (callback)print_graph, (void*)today, "Displaying relation graph...\n");
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
 
-    log_message (DEBUG_SUMMARY, (debug_fn)print_result_statistics, (void*)result);
+    log_message (DEBUG_INFO, (callback)print_result_statistics, (void*)result, "Displaying result statistics...\n");
 
     return result;
 }
@@ -756,12 +791,12 @@ _pairup_least_partner_priority (relation_graph_t *today,
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_row_count_asc);
 
-    log_message (DEBUG_INFO, (debug_fn)print_graph, (void*)today);
+    log_message (DEBUG_INFO, (callback)print_graph, (void*)today, "Displaying relation graph...\n");
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
 
-    log_message (DEBUG_SUMMARY, (debug_fn)print_result_statistics, (void*)result);
+    log_message (DEBUG_INFO, (callback)print_result_statistics, (void*)result, "Displaying result statistics...\n");
 
     return result;
 }
@@ -776,7 +811,7 @@ _pairup_most_partner_priority (relation_graph_t *today,
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_row_count_desc);
 
-    log_message (DEBUG_INFO, (debug_fn)print_graph, (void*)today);
+    log_message (DEBUG_INFO, (callback)print_graph, (void*)today, "Displaying relation graph...\n");
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
@@ -794,10 +829,12 @@ _pairup_least_request_priority (relation_graph_t *today,
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_requests_asc);
 
-    log_message (DEBUG_INFO, (debug_fn)print_graph, (void*)today);
+    log_message (DEBUG_INFO, (callback)print_graph, (void*)today, "Displaying relation graph...\n");
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
+
+    log_message (DEBUG_INFO, (callback)print_result_statistics, (void*)result, "Displaying result statistics...\n");
 
     return result;
 }
@@ -812,10 +849,12 @@ _pairup_most_request_priority (relation_graph_t *today,
     /* Sort the members based on the availability */
     qsort(today->relations, today->count, sizeof(relation_t *), compare_requests_desc);
 
-    log_message (DEBUG_INFO, (debug_fn)print_graph, (void*)today);
+    log_message (DEBUG_INFO, (callback)print_graph, (void*)today, "Displaying relation graph...\n");
 
     /* Pair up the members */
     _pairup_bfs (today, members, result);
+
+    log_message (DEBUG_INFO, (callback)print_result_statistics, (void*)result, "Displaying result statistics...\n");
 
     return result;
 }

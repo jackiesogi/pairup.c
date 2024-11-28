@@ -45,6 +45,15 @@ typedef struct pair_result pair_result_t;
 typedef struct pair_result pair_result;
 typedef struct pair_result result;
 
+/* Pairup algorithm */
+typedef pair_result_t *
+(*pairup_internal) (relation_graph_t *today,
+                    member_t *member_list[]);
+
+typedef struct pairup_algorithm pairup_algorithm_t;
+typedef struct pairup_algorithm algorithm_t;
+typedef struct pairup_algorithm algorithm;
+
 /**********************************  Data types  **************************************/
 
 /* Member's info and their willingness to practice on that day */
@@ -72,15 +81,10 @@ struct relation
     size_t count;                                 // Number of candidates for this member
     member *candidates[_MAX_MATCHES_LEN];         // Candidates for this member
     slot matched_slot[_MAX_MATCHES_LEN];          // Matched time slot for this member
-    
+
     size_t availability;                          // Number of slots available on that day
     slot available_slot[_MAX_MATCHES_LEN];        // Available time slot for this member
 };
-
-// struct host
-// {
-//     member *host;           // Host's information
-//     
 
 /* A graph represents today's matching relations between members */
 /* Technically, it's a graph data type using adjacency list representation */
@@ -98,11 +102,16 @@ struct pair_result
     size_t singles;
     size_t pairs;
     size_t total_requests;
-    
     slot matched_slot[_MAX_MATCHES_LEN];
     member *member_list[_MAX_MATCHES_LEN];
     member *single_list[_MAX_MATCHES_LEN];
     pair *pair_list[_MAX_MATCHES_LEN];
+};
+
+struct pairup_algorithm
+{
+    const char *name;
+    const pairup_internal algorithm;
 };
 
 /* For example: */

@@ -14,6 +14,14 @@ you can choose to \n\
 related to weekly topic. ONLY on Monday can talk about \n\
 your last weekend or sharing something interesting."
 
+#define DEBUG_LOG_FORMATTED_MESSAGE(format, args) \
+    do { \
+        if (format != NULL) { \
+            vprintf(format, args); \
+            printf("\n"); \
+        } \
+    } while (0)
+
 void
 print_worksheet (sheet_t *worksheet);
 
@@ -45,11 +53,12 @@ print_result_statistics (pair_result_t *result);
 
 extern int debug_level;
 
-typedef void (*debug_fn)(void *context);
+typedef void (*callback)(void *context);
 
 void
 log_message (int level,
-             debug_fn fptr,
-             void *context);
+             callback fptr,
+             void *context,
+             const char *fmt, ...);
 
 #endif  // PAIRUP_FORMATTER_H

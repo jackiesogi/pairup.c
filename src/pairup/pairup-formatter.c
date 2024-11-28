@@ -379,16 +379,17 @@ print_result_statistics (pair_result_t *result)
     size_t P = result->pairs;
     size_t NP = result->singles;
     size_t REQ = result->total_requests;
-    size_t RATIO_P = (P * 100) / M;
-    size_t RATIO_NP = (NP * 100) / M;
+    size_t SREQ = P << 1;
+    size_t NREQ = NP;
+    size_t RATIO_SREQ = (SREQ * 100) / REQ;
+    size_t RATIO_NREQ = (NREQ * 100) / REQ;
 
     printf("=======================  STATISTICS  =======================\n");
-    printf("Number of members today: %zu\n", result->member);
-    printf("Number of successful pairs: %zu (%zu%%)\n", result->pairs, RATIO_P);
-    printf("Number of members not fully paired: %zu (%zu%%)\n", result->singles, RATIO_NP);
-    printf("Total requests of today %zu\n", REQ);
-    printf("Number of fully paired requests %zu (%zu%%)\n", P * 2, (P * 2 * 100) / REQ);
-    printf("Number of not fully paired requests %zu (%zu%%)\n", NP, (NP * 100) / REQ);
+    printf("Members: %zu\n", M);
+    printf("Successful pairs: %zu\n", P);
+    printf("Total requests: %zu\n", REQ);
+    printf("Successful requests: %zu (%zu%%)\n", SREQ, RATIO_SREQ);
+    printf("Failed requests: %zu (%zu%%)\n", NREQ, RATIO_NREQ);
     printf("Pair list:\n");
     for (int i = 0; i < result->pairs; i++)
     {
@@ -428,15 +429,27 @@ int debug_level = DEBUG_NONE;
 /* Debug function */
 void
 log_message (int level,
-             debug_fn fptr,
-             void *context)
+             callback fptr,
+             void *context,
+             const char *fmt, ...)
 {
     if (level > debug_level)
     {
         return;
     }
+
+    va_list args;
+    va_start(args, fmt);
+    va_end(args);
+
+    if (fmt != NULL)
+    {
+        vprintf(fmt, args);
+        printf("\n");
+    }
+
     if (fptr != NULL)
     {
-        fptr (context);
+        fptr(context);
     }
 }
