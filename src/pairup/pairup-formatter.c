@@ -85,7 +85,7 @@ print_truncated (const char *str,
 }
 
 void
-print_worksheet (sheet_t *worksheet)
+print_worksheet (sheet *worksheet)
 {
     setlocale(LC_CTYPE, ""); // Set locale for wide character support
 
@@ -155,7 +155,7 @@ count_lines (const char *filename)
 }
 
 void
-generate_graph_output_image(sheet_t *worksheet,
+generate_graph_output_image(sheet *worksheet,
                             const char *filename)
 {
     char dotfile[1024];
@@ -181,7 +181,7 @@ generate_graph_output_image(sheet_t *worksheet,
 }
 
 void
-print_graph_to_file (sheet_t *worksheet,
+print_graph_to_file (sheet *worksheet,
                      const char *filename)
 {
     printf("Output: %s\n", filename);
@@ -288,7 +288,7 @@ print_graph_to_file (sheet_t *worksheet,
 }
 
 void
-print_digraph_to_file (sheet_t *worksheet,
+print_digraph_to_file (sheet *worksheet,
                        const char *filename)
 {
     FILE *file = fopen(filename, "w");
@@ -338,8 +338,8 @@ print_digraph_to_file (sheet_t *worksheet,
 }
 
 void
-print_result (sheet_t *worksheet,
-              pair_result_t *result)
+print_result (sheet *worksheet,
+              pair_result *result)
 {
     printf("%s\n", GREETING);
 
@@ -373,7 +373,26 @@ print_result (sheet_t *worksheet,
 }
 
 void
-print_result_statistics (pair_result_t *result)
+display_graph (void *context)
+{
+    relation_graph_t *graph = (relation_graph_t *)context;
+
+    for (int i = 0; i < graph->count; i++)
+    {
+        relation_t *row = graph->relations[i];
+        printf("Relation %d: [ %s ] --> ", i, row->candidates[0]->name);
+        for (int j = 1; j < row->count; j++)
+        {
+            int time = row->matched_slot[j];
+            printf("%s(at %d) --> ", row->candidates[j]->name, time);
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
+void
+display_summary (pair_result *result)
 {
     size_t M = result->member;
     size_t P = result->pairs;
@@ -405,33 +424,12 @@ print_result_statistics (pair_result_t *result)
 
 int debug_level = DEBUG_NONE;
 
-// void
-// log_message (int level,
-//              const char *message)
-// {
-//     if (level <= debug_level)
-//     {
-//         switch (level)
-//         {
-//             case DEBUG_ERROR:
-//                 fprintf(stderr, "[ERROR] %s\n", message);
-//                 break;
-//             case DEBUG_WARNING:
-//                 fprintf(stderr, "[WARNING] %s\n", message);
-//                 break;
-//             case DEBUG_INFO:
-//                 fprintf(stdout, "[INFO] %s\n", message);
-//                 break;
-//         }
-//     }
-// }
-
 /* Debug function */
 void
-log_message (int level,
-             callback fptr,
-             void *context,
-             const char *fmt, ...)
+do_if_debug_level_is_greater (int level,
+                              callback fptr,
+                              void *context,
+                              const char *fmt, ...)
 {
     if (level > debug_level)
     {

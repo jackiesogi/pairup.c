@@ -12,7 +12,7 @@
 /* Technically, `pairup_algorithms[]` is an array with several function pointers */
 /* pointing to corresponding priority functions */
 #define _MAX_PAIRUP_ALGORITHMS 10
-const pairup_algorithm_t pairup_algorithms[] = {  // WHO WILL BE PAIRED UP FIRST?
+const pairup_algorithm a[] = {  // WHO WILL BE PAIRED UP FIRST?
     {
         "LEAST_AVAILABILITY_PRIORITY",            // Members with least time slots filled in.
          _pairup_least_availability_priority
@@ -65,7 +65,7 @@ static void (*_preprocess_relation_graph) (sheet *, relation_graph *, member *[]
 /* The top-level pairup function */
 /* This function will iterate through all the priority functions */
 /* and choose the target result that has maximized matches */
-pair_result_t *
+pair_result *
 pairup (sheet *worksheet)
 {
     relation_graph *graph = _new_relation_graph();
@@ -80,11 +80,11 @@ pairup (sheet *worksheet)
     result *best;
     result *temp;
     best = temp = NULL;
-    int best_id = -1;
+    int id = -1;
 
     for (int i = 0; i < _MAX_PAIRUP_ALGORITHMS; i++)
     {
-        pairup_internal algorithm = pairup_algorithms[i].algorithm;
+        pairup_internal algorithm = a[i].algorithm;
 
         if (!algorithm) continue;
 
@@ -113,7 +113,7 @@ pairup (sheet *worksheet)
                 _free_pair_result(best);
             }
             best = temp;
-            best_id = i;
+            id = i;
         }
         else
         {
@@ -121,17 +121,17 @@ pairup (sheet *worksheet)
         }
     }
 
-    log_message (DEBUG_SUMMARY, NULL, NULL, "Best Algorithm: %s", pairup_algorithms[best_id].name);
-    log_message (DEBUG_SUMMARY, (callback)print_result_statistics, (void*)best, NULL);
-    log_message (DEBUG_SUMMARY, NULL, NULL, "Relation Graph:", NULL);
-    log_message (DEBUG_SUMMARY, (callback)print_graph, (void*)graph, NULL);
+    debug_printf (DEBUG_SUMMARY, "Best Algorithm: %s", a[id].name);
+    debug_action (DEBUG_SUMMARY, (callback)display_summary, (void*)best);
+    debug_printf (DEBUG_SUMMARY, "Relation Graph:");
+    debug_action (DEBUG_SUMMARY, (callback)display_graph, (void*)graph);
 
     _free_relation_graph (graph);
 
     return best;
 }
 
-relation_graph_t *
+graph *
 pairup_graph (sheet *worksheet)
 {
     relation_graph *graph = _new_relation_graph();
@@ -142,7 +142,7 @@ pairup_graph (sheet *worksheet)
     _preprocess_fixed_memblist (worksheet, member_list);
     _preprocess_relation_graph (worksheet, graph, member_list);
 
-    pairup_internal algorithm = pairup_algorithms[0].algorithm;
+    pairup_internal algorithm = a[0].algorithm;
 
     if (!algorithm) return NULL;
 
@@ -239,7 +239,7 @@ _get_member_name (sheet *worksheet,
 
 static int
 _generate_member_list (sheet *worksheet,
-                       member *member_list[])
+                       member *mlist[])
 {
     int i, count = 0;
 
@@ -256,7 +256,7 @@ _generate_member_list (sheet *worksheet,
         strncpy(member->name, name, lastchar);
         member->name[lastchar] = '\0';
 
-        member_list[i] = member;
+        mlist[i] = member;
         count++;
     }
 
@@ -277,8 +277,8 @@ static int
 compare_availability_asc (const void *a,
                           const void *b)
 {
-    const relation_t *ra = *(const relation_t **)a;
-    const relation_t *rb = *(const relation_t **)b;
+    const relation *ra = *(const relation **)a;
+    const relation *rb = *(const relation **)b;
 
     return (ra->candidates[0]->availability -
             rb->candidates[0]->availability);  // Tie-breaking by priority
@@ -288,8 +288,8 @@ static int
 compare_availability_desc (const void *a,
                           const void *b)
 {
-    const relation_t *ra = *(const relation_t **)a;
-    const relation_t *rb = *(const relation_t **)b;
+    const relation *ra = *(const relation **)a;
+    const relation *rb = *(const relation **)b;
 
     return (rb->candidates[0]->availability -
             ra->candidates[0]->availability);
@@ -299,8 +299,8 @@ static int
 compare_row_count_asc (const void *a,
                        const void *b)
 {
-    const relation_t *ra = *(const relation_t **)a;
-    const relation_t *rb = *(const relation_t **)b;
+    const relation *ra = *(const relation **)a;
+    const relation *rb = *(const relation **)b;
 
     return ra->count - rb->count;
 }
@@ -309,8 +309,8 @@ static int
 compare_row_count_desc (const void *a,
                         const void *b)
 {
-    const relation_t *ra = *(const relation_t **)a;
-    const relation_t *rb = *(const relation_t **)b;
+    const relation *ra = *(const relation **)a;
+    const relation *rb = *(const relation **)b;
 
     return rb->count - ra->count;
 }
@@ -319,8 +319,8 @@ static int
 compare_id_asc (const void *a,
                 const void *b)
 {
-    const relation_t *ra = *(const relation_t **)a;
-    const relation_t *rb = *(const relation_t **)b;
+    const relation *ra = *(const relation **)a;
+    const relation *rb = *(const relation **)b;
 
     return (ra->candidates[0]->id - rb->candidates[0]->id);
 }
@@ -329,8 +329,8 @@ static int
 compare_id_desc (const void *a,
                  const void *b)
 {
-    const relation_t *ra = *(const relation_t **)a;
-    const relation_t *rb = *(const relation_t **)b;
+    const relation *ra = *(const relation **)a;
+    const relation *rb = *(const relation **)b;
 
     return (rb->candidates[0]->id - ra->candidates[0]->id);
 }
@@ -339,8 +339,8 @@ static int
 compare_requests_asc (const void *a,
                       const void *b)
 {
-    const relation_t *ra = *(const relation_t **)a;
-    const relation_t *rb = *(const relation_t **)b;
+    const relation *ra = *(const relation **)a;
+    const relation *rb = *(const relation **)b;
 
     return (ra->candidates[0]->requests - rb->candidates[0]->requests);
 }
@@ -349,8 +349,8 @@ static int
 compare_requests_desc (const void *a,
                        const void *b)
 {
-    const relation_t *ra = *(const relation_t **)a;
-    const relation_t *rb = *(const relation_t **)b;
+    const relation *ra = *(const relation **)a;
+    const relation *rb = *(const relation **)b;
 
     return (rb->candidates[0]->requests - ra->candidates[0]->requests);
 }
@@ -359,8 +359,8 @@ static int
 compare_earliest_slot_asc (const void *a,
                            const void *b)
 {
-    const relation_t *ra = *(const relation_t **)a;
-    const relation_t *rb = *(const relation_t **)b;
+    const relation *ra = *(const relation **)a;
+    const relation *rb = *(const relation **)b;
 
     return (ra->candidates[0]->earliest_slot -
             rb->candidates[0]->earliest_slot);
@@ -370,31 +370,12 @@ static int
 compare_earliest_slot_desc (const void *a,
                             const void *b)
 {
-    const relation_t *ra = *(const relation_t **)a;
-    const relation_t *rb = *(const relation_t **)b;
+    const relation *ra = *(const relation **)a;
+    const relation *rb = *(const relation **)b;
 
     return (rb->candidates[0]->earliest_slot -
             ra->candidates[0]->earliest_slot);
 }
-
-// static int
-// compare_ensure_list_asc (const void *a,
-//                          const void *b)
-// {
-//     /* A is in ensure list but b isn't */
-//     for (int i = 0; i < ensure_count; i++)
-//     {
-//         if (ensure_list[i] == *(member_t **)a)
-//         {
-//             return -1;
-//         }
-//         if (ensure_list[i] == *(member_t **)b)
-//         {
-//             return 1;
-//         }
-//     }
-//     return 0;
-// }
 
 /* TODO: Record the modified time and implement this function */
 static int
@@ -403,29 +384,9 @@ compare_first_modified_asc ()
     return 0;
 }
 
-/* Debug purpose */
-void
-print_graph (void *context)
-{
-    relation_graph_t *graph = (relation_graph_t *)context;
-
-    for (int i = 0; i < graph->count; i++)
-    {
-        relation_t *row = graph->relations[i];
-        printf("Relation %d: [ %s ] --> ", i, row->candidates[0]->name);
-        for (int j = 1; j < row->count; j++)
-        {
-            int time = row->matched_slot[j];
-            printf("%s(at %d) --> ", row->candidates[j]->name, time);
-        }
-        printf("\n");
-    }
-    printf("\n");
-}
-
 static int
-_find_member_id (relation_graph_t *today,
-                 member_t *member)
+_find_member_id (graph *today,
+                 member *member)
 {
     for (int i = 0; i < today->count; i++)
     {
@@ -442,8 +403,8 @@ _find_member_id (relation_graph_t *today,
 
 static void 
 _generate_relations (sheet *worksheet,
-                     relation_graph_t *today,
-                     member_t *member_list[])
+                     graph *today,
+                     member *mlist[])
 {
     int i, j, k;
     char cell[8];
@@ -454,7 +415,7 @@ _generate_relations (sheet *worksheet,
     for (i = _FILED_ROW_START; i < worksheet->rows-1; i++)
     {
         first = true;
-        relation_t *row = NULL;
+        relation *row = NULL;
 
         /* Scan each column (time slots) */
         for (j = _FILED_COL_START; j <= _FILED_COL_END; j++)
@@ -470,7 +431,7 @@ _generate_relations (sheet *worksheet,
                     row = _new_relation();
                     row->availability = 0;
                     row->matched_slot[0] = -1;  // no one will be paired with himself/herself
-                    row->candidates[0] = member_list[i];
+                    row->candidates[0] = mlist[i];
                     row->count = 1;
 
                     today->relations[today->count] = row;
@@ -494,7 +455,7 @@ _generate_relations (sheet *worksheet,
                         }
 
                         row->matched_slot[row->count] = j;
-                        row->candidates[row->count] = member_list[k];
+                        row->candidates[row->count] = mlist[k];
                         row->count++;
                     }
                 }
@@ -537,9 +498,9 @@ _remove_from_available_slot (int available_slot[_MAX_MEMBERS_LEN][_MAX_MEMBERS_L
 }
 
 static int
-_result_existed (pair_result_t *result,
-                member_t *a,
-                member_t *b)
+_result_existed (pair_result *result,
+                 member *a,
+                 member *b)
 {
     for (int i = 0; i < result->pairs; i++)
     {
@@ -554,9 +515,9 @@ _result_existed (pair_result_t *result,
 }
 
 static void 
-_pairup_bfs (relation_graph_t *today,
-             member_t *members[],
-             pair_result_t *result)
+_pairup_bfs (graph *today,
+             member *members[],
+             pair_result *result)
 {
     /* Array that records the remaining time requested by each member */
     int remain[_MAX_MEMBERS_LEN] = { 0 };
@@ -598,9 +559,9 @@ _pairup_bfs (relation_graph_t *today,
             continue;
         }
 
-        relation_t *row = today->relations[i];
-        member_t *a = row->candidates[0];  // himself/herself
-        member_t *b = NULL;  // To be paired
+        relation *row = today->relations[i];
+        member *a = row->candidates[0];  // himself/herself
+        member *b = NULL;  // To be paired
 
         int j;
         /* Pair up the members */
@@ -628,7 +589,7 @@ _pairup_bfs (relation_graph_t *today,
                 remain[i]--;
                 remain[bi]--;
 
-                pair_t *pair = _new_pair();
+                pair *pair = _new_pair();
                 pair->a = a;
                 pair->b = b;
                 pair->time = row->matched_slot[j];
@@ -661,200 +622,95 @@ _pairup_bfs (relation_graph_t *today,
 }
 
 /* TODO: Sort not only rows but also elements in that row */
-static pair_result_t *
-_pairup_least_availability_priority (relation_graph_t *today,
-                                     member_t *members[])
+static pair_result *
+_pairup_with_priority (graph *today,
+                       member *members[],
+                       int (*compare_fn)(const void *, const void *))
 {
     /* Initialize the result */
-    pair_result_t *result = _new_pair_result(0, 0, 0);
+    pair_result *result = _new_pair_result(0, 0, 0);
 
-    /* Sort the members based on the availability */
-    qsort(today->relations, today->count, sizeof(relation_t *), compare_availability_asc);
+    /* Sort the members based on the provided comparison function */
+    qsort(today->relations, today->count, sizeof(relation *), compare_fn);
 
-    log_message (DEBUG_INFO, (callback)print_graph, (void*)today, "Displaying relation graph...\n");
+    debug_printf(DEBUG_INFO, "Sorted graph based on the priority:\n");
+    debug_action(DEBUG_INFO, (callback)display_graph, (void*)today);
 
     /* Pair up the members */
-    _pairup_bfs (today, members, result);
+    _pairup_bfs(today, members, result);
 
-    log_message (DEBUG_INFO, (callback)print_result_statistics, (void*)result, "Displaying result statistics...\n");
+    debug_printf(DEBUG_INFO, "Pair result summary:\n");
+    debug_action(DEBUG_INFO, (callback)display_summary, (void*)result);
 
     return result;
 }
 
-static pair_result_t *
-_pairup_most_availability_priority (relation_graph_t *today,
-                                    member_t *members[])
+static pair_result *
+_pairup_least_availability_priority (graph *graph,
+                                     member *members[])
 {
-    /* Initialize the result */
-    pair_result_t *result = _new_pair_result(0, 0, 0);
-
-    /* Sort the members based on the availability */
-    qsort(today->relations, today->count, sizeof(relation_t *), compare_availability_desc);
-
-    log_message (DEBUG_INFO, (callback)print_graph, (void*)today, "Displaying relation graph...\n");
-
-    /* Pair up the members */
-    _pairup_bfs (today, members, result);
-
-    log_message (DEBUG_INFO, (callback)print_result_statistics, (void*)result, "Displaying result statistics...\n");
-
-    return result;
+    return _pairup_with_priority(graph, members, compare_availability_asc);
 }
 
-static pair_result_t *
-_pairup_smallest_row_id_priority (relation_graph_t *today,
-                                  member_t *members[])
+static pair_result *
+_pairup_most_availability_priority (graph *graph,
+                                    member *members[])
 {
-    /* Initialize the result */
-    pair_result_t *result = _new_pair_result(0, 0, 0);
-
-    /* Sort the members based on the availability */
-    qsort(today->relations, today->count, sizeof(relation_t *), compare_id_asc);
-
-    log_message (DEBUG_INFO, (callback)print_graph, (void*)today, "Displaying relation graph...\n");
-
-    /* Pair up the members */
-    _pairup_bfs (today, members, result);
-
-    log_message (DEBUG_INFO, (callback)print_result_statistics, (void*)result, "Displaying result statistics...\n");
-
-    return result;
+    return _pairup_with_priority(graph, members, compare_availability_desc);
 }
 
-static pair_result_t *
-_pairup_largest_row_id_priority (relation_graph_t *today,
-                                 member_t *members[])
+static pair_result *
+_pairup_smallest_row_id_priority (graph *graph,
+                                  member *members[])
 {
-    /* Initialize the result */
-    pair_result_t *result = _new_pair_result(0, 0, 0);
-
-    /* Sort the members based on the availability */
-    qsort(today->relations, today->count, sizeof(relation_t *), compare_id_desc);
-
-    log_message (DEBUG_INFO, (callback)print_graph, (void*)today, "Displaying relation graph...\n");
-
-    /* Pair up the members */
-    _pairup_bfs (today, members, result);
-
-    log_message (DEBUG_INFO, (callback)print_result_statistics, (void*)result, "Displaying result statistics...\n");
-
-    return result;
+    return _pairup_with_priority(graph, members, compare_id_asc);
 }
 
-static pair_result_t *
-_pairup_earliest_available_slot_priority (relation_graph_t *today,
-                                           member_t *members[])
+static pair_result *
+_pairup_largest_row_id_priority (graph *graph,
+                                 member *members[])
 {
-    /* Initialize the result */
-    pair_result_t *result = _new_pair_result(0, 0, 0);
-
-    /* Sort the members based on the availability */
-    qsort(today->relations, today->count, sizeof(relation_t *), compare_earliest_slot_asc);
-
-    log_message (DEBUG_INFO, (callback)print_graph, (void*)today, "Displaying relation graph...\n");
-
-    /* Pair up the members */
-    _pairup_bfs (today, members, result);
-
-    log_message (DEBUG_INFO, (callback)print_result_statistics, (void*)result, "Displaying result statistics...\n");
-
-    return result;
+    return _pairup_with_priority(graph, members, compare_id_desc);
 }
 
-static pair_result_t *
-_pairup_latest_available_slot_priority (relation_graph_t *today,
-                                        member_t *members[])
+static pair_result *
+_pairup_earliest_available_slot_priority (graph *graph,
+                                           member *members[])
 {
-    /* Initialize the result */
-    pair_result_t *result = _new_pair_result(0, 0, 0);
-
-    /* Sort the members based on the availability */
-    qsort(today->relations, today->count, sizeof(relation_t *), compare_earliest_slot_desc);
-
-    log_message (DEBUG_INFO, (callback)print_graph, (void*)today, "Displaying relation graph...\n");
-
-    /* Pair up the members */
-    _pairup_bfs (today, members, result);
-
-    log_message (DEBUG_INFO, (callback)print_result_statistics, (void*)result, "Displaying result statistics...\n");
-
-    return result;
+    return _pairup_with_priority(graph, members, compare_earliest_slot_asc);
 }
 
-static pair_result_t *
-_pairup_least_partner_priority (relation_graph_t *today,
-                                member_t *members[])
+static pair_result *
+_pairup_latest_available_slot_priority (graph *graph,
+                                        member *members[])
 {
-    /* Initialize the result */
-    pair_result_t *result = _new_pair_result(0, 0, 0);
-
-    /* Sort the members based on the availability */
-    qsort(today->relations, today->count, sizeof(relation_t *), compare_row_count_asc);
-
-    log_message (DEBUG_INFO, (callback)print_graph, (void*)today, "Displaying relation graph...\n");
-
-    /* Pair up the members */
-    _pairup_bfs (today, members, result);
-
-    log_message (DEBUG_INFO, (callback)print_result_statistics, (void*)result, "Displaying result statistics...\n");
-
-    return result;
+    return _pairup_with_priority(graph, members, compare_earliest_slot_desc);
 }
 
-static pair_result_t *
-_pairup_most_partner_priority (relation_graph_t *today,
-                               member_t *members[])
+static pair_result *
+_pairup_least_partner_priority (graph *graph,
+                                member *members[])
 {
-    /* Initialize the result */
-    pair_result_t *result = _new_pair_result(0, 0, 0);
-
-    /* Sort the members based on the availability */
-    qsort(today->relations, today->count, sizeof(relation_t *), compare_row_count_desc);
-
-    log_message (DEBUG_INFO, (callback)print_graph, (void*)today, "Displaying relation graph...\n");
-
-    /* Pair up the members */
-    _pairup_bfs (today, members, result);
-
-    return result;
+    return _pairup_with_priority(graph, members, compare_row_count_asc);
 }
 
-static pair_result_t *
-_pairup_least_request_priority (relation_graph_t *today,
-                                member_t *members[])
+static pair_result *
+_pairup_most_partner_priority (graph *graph,
+                               member *members[])
 {
-    /* Initialize the result */
-    pair_result_t *result = _new_pair_result(0, 0, 0);
-
-    /* Sort the members based on the availability */
-    qsort(today->relations, today->count, sizeof(relation_t *), compare_requests_asc);
-
-    log_message (DEBUG_INFO, (callback)print_graph, (void*)today, "Displaying relation graph...\n");
-
-    /* Pair up the members */
-    _pairup_bfs (today, members, result);
-
-    log_message (DEBUG_INFO, (callback)print_result_statistics, (void*)result, "Displaying result statistics...\n");
-
-    return result;
+    return _pairup_with_priority(graph, members, compare_row_count_desc);
 }
 
-static pair_result_t *
-_pairup_most_request_priority (relation_graph_t *today,
-                               member_t *members[])
+static pair_result *
+_pairup_least_request_priority (graph *graph,
+                                member *members[])
 {
-    /* Initialize the result */
-    pair_result_t *result = _new_pair_result(0, 0, 0);
+    return _pairup_with_priority(graph, members, compare_requests_asc);
+}
 
-    /* Sort the members based on the availability */
-    qsort(today->relations, today->count, sizeof(relation_t *), compare_requests_desc);
-
-    log_message (DEBUG_INFO, (callback)print_graph, (void*)today, "Displaying relation graph...\n");
-
-    /* Pair up the members */
-    _pairup_bfs (today, members, result);
-
-    log_message (DEBUG_INFO, (callback)print_result_statistics, (void*)result, "Displaying result statistics...\n");
-
-    return result;
+static pair_result *
+_pairup_most_request_priority (graph *graph,
+                               member *members[])
+{
+    return _pairup_with_priority(graph, members, compare_requests_desc);
 }

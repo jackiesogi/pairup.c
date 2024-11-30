@@ -23,25 +23,28 @@ your last weekend or sharing something interesting."
     } while (0)
 
 void
-print_worksheet (sheet_t *worksheet);
+print_worksheet (sheet *worksheet);
 
 void
-print_result (sheet_t *worksheet,
-              pair_result_t *result);
+print_result (sheet *worksheet,
+              pair_result *result);
 
 void
-generate_graph_output_image (sheet_t *worksheet,
+generate_graph_output_image (sheet *worksheet,
                              const char *filename);
 
 void
-print_graph_to_file (sheet_t *worksheet,
+print_graph_to_file (sheet *worksheet,
                      const char *filename);
 void
-print_digraph_to_file (sheet_t *worksheet,
+print_digraph_to_file (sheet *worksheet,
                      const char *filename);
 
 void
-print_result_statistics (pair_result_t *result);
+display_summary (pair_result *result);
+
+void
+display_graph (void *graph);
 
 /* Debug levels */
 #define DEBUG_NONE     0
@@ -51,14 +54,36 @@ print_result_statistics (pair_result_t *result);
 #define DEBUG_INFO     4
 #define DEBUG_ALL      5
 
+/* Macros to log messages */
+#define log_message(file, fmt, ...) \
+    do { \
+        fprintf(file, fmt, ##__VA_ARGS__); \
+    } while(0)
+
+
+/* Macros to log messages or perform actions based on debug level */
+#define debug_printf(level, fmt, ...) \
+    do_if_debug_level_is_greater(level, NULL, NULL, fmt, ##__VA_ARGS__)
+
+#define debug_action(level, callback, context) \
+    do_if_debug_level_is_greater(level, callback, context, NULL)
+
+#define debug_task(level, callback, context, fmt, ...) \
+    do_if_debug_level_is_greater(level, callback, context, fmt, ##__VA_ARGS__)
+
 extern int debug_level;
 
+/* Callback function type */
 typedef void (*callback)(void *context);
 
-void
-log_message (int level,
-             callback fptr,
-             void *context,
-             const char *fmt, ...);
+/* Macro for output string */
+#define RESULT_SUMMARY_MESSAGE "Displaying result statistics...\n"
+#define GRAPH_STATS_MESSAGE    "Displaying relation graph...\n"
+
+/* Function to handle conditional logging or callback execution based on debug level */
+void do_if_debug_level_is_greater(int level,
+                                  callback fptr,
+                                  void *context,
+                                  const char *fmt, ...);
 
 #endif  // PAIRUP_FORMATTER_H

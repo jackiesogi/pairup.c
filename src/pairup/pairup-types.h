@@ -24,12 +24,12 @@ typedef int slot;
 
 /* Member */
 typedef struct member member_t;
-typedef struct member member;
+typedef struct member member;  // Recommended
 typedef struct member memb;
 
 /* Pair */
 typedef struct pair pair_t;
-typedef struct pair pair;
+typedef struct pair pair;  // Recommended
 
 /* Relation */
 typedef struct relation relation_t;
@@ -38,19 +38,22 @@ typedef struct relation relation;
 /* Relation graph */
 typedef struct relation_graph relation_graph_t;
 typedef struct relation_graph relation_graph;
-typedef struct relation_graph graph;
+typedef struct relation_graph graph_t;
+typedef struct relation_graph graph;  // Recommended
 
 /* Pair result */
 typedef struct pair_result pair_result_t;
-typedef struct pair_result pair_result;
+typedef struct pair_result pair_result;  // Recommended
+typedef struct pair_result result_t;
 typedef struct pair_result result;
 
 /* Pairup algorithm */
-typedef pair_result_t *
-(*pairup_internal) (relation_graph_t *today,
+typedef pair_result *
+(*pairup_internal) (relation_graph *today,
                     member_t *member_list[]);
 
 typedef struct pairup_algorithm pairup_algorithm_t;
+typedef struct pairup_algorithm pairup_algorithm;  // Recommended
 typedef struct pairup_algorithm algorithm_t;
 typedef struct pairup_algorithm algorithm;
 
@@ -103,8 +106,8 @@ struct pair_result
     size_t pairs;
     size_t total_requests;
     slot matched_slot[_MAX_MATCHES_LEN];
-    member *member_list[_MAX_MATCHES_LEN];
-    member *single_list[_MAX_MATCHES_LEN];
+    struct member *member_list[_MAX_MATCHES_LEN];
+    struct member *single_list[_MAX_MATCHES_LEN];
     pair *pair_list[_MAX_MATCHES_LEN];
 };
 
@@ -115,7 +118,7 @@ struct pairup_algorithm
 };
 
 /* For example: */
-// relation_graph_t today;           --> A graph named 'today'
+// relation_graph today;           --> A graph named 'today'
 // today.relations[i].name;          --> Name of the i-th member in the graph
 // today.relations[i].candidates[j]  --> The j-th candidate of the i-th member
 
@@ -160,31 +163,31 @@ _new_member (void);
 void
 _free_member (member_t *member);
 
-pair_t *
+pair *
 _new_pair (void);
 
 void
-_free_pair (pair_t *pair);
+_free_pair (pair *pair);
 
-relation_t *
+relation *
 _new_relation (void);
 
 void
-_free_relation (relation_t *relation);
+_free_relation (relation *relation);
 
-relation_graph_t *
+relation_graph *
 _new_relation_graph (void);
 
 void 
-_free_relation_graph (relation_graph_t *today);
+_free_relation_graph (relation_graph *today);
 
-pair_result_t *
+pair_result *
 _new_pair_result (int member,
                   int pairs,
                   int singles);
 
 void
-_free_pair_result (pair_result_t *result);
+_free_pair_result (pair_result *result);
 
 #endif  // PAIRUP_TYPES_H
 

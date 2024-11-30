@@ -88,14 +88,14 @@ _free_member (member_t *m)
     free (m);
 }
 
-pair_t *
+pair *
 _new_pair (void)
 {
-    return (pair_t *) malloc (sizeof(pair_t));
+    return (pair *) malloc (sizeof(pair));
 }
 
 void
-_free_pair (pair_t *p)
+_free_pair (pair *p)
 {
     if (!p)
     {
@@ -105,14 +105,14 @@ _free_pair (pair_t *p)
     free (p);
 }
 
-relation_t *
+relation *
 _new_relation (void)
 {
-    return (relation_t *) malloc (sizeof(relation_t));
+    return (relation *) malloc (sizeof(relation));
 }
 
 void
-_free_relation (relation_t *r)
+_free_relation (relation *r)
 {
     if (!r)
     {
@@ -122,14 +122,14 @@ _free_relation (relation_t *r)
     free (r);
 }
 
-relation_graph_t *
+relation_graph *
 _new_relation_graph (void)
 {
-    return (relation_graph_t *) malloc (sizeof(relation_graph_t));
+    return (relation_graph *) malloc (sizeof(relation_graph));
 }
 
 void
-_free_relation_graph (relation_graph_t *graph)
+_free_relation_graph (relation_graph *graph)
 {
     // printf("graph address: %p\n", graph);
     if (!graph)
@@ -146,15 +146,15 @@ _free_relation_graph (relation_graph_t *graph)
     free (graph);
 }
 
-pair_result_t *
+pair_result *
 _new_pair_result (int pairs,
                   int singles,
                   int members)
 {
-    pair_result_t *result = (pair_result_t *)malloc(sizeof(pair_result_t));
+    pair_result *result = (pair_result *)malloc(sizeof(pair_result));
     if (result == NULL)
     {
-        fprintf(stderr, "Memory allocation failed for pair_result_t\n");
+        fprintf(stderr, "Memory allocation failed for pair_result\n");
         return NULL;
     }
 
@@ -167,7 +167,7 @@ _new_pair_result (int pairs,
 }
 
 void
-_free_pair_result (pair_result_t *result)
+_free_pair_result (pair_result *result)
 {
     if (!result)
     {
