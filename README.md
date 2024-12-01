@@ -16,7 +16,7 @@ This program provides a solution to help members in English study group to pair 
 
 - Install the required packages.
 ```bash
-sudo apt-get install build-essential make git
+sudo apt-get install build-essential make git cmake
 ```
 
 - Clone the repository.
@@ -27,7 +27,8 @@ cd pairup.c
 
 - Run `make` to build the program.
 ```bash
-make
+mkdir build
+(mkdir -p build; cd build; cmake ..; make)
 ```
 
 - Run `get-today-google-sheet.sh` to get the latest sheet (`pairup` will need the csv file it fetched).

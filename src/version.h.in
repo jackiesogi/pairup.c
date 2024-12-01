@@ -1,0 +1,7 @@
+#ifndef VERSION_H
+#define VERSION_H
+
+/* Program version format: version <major>.<minor>.<patch> */
+#define PROGRAM_VERSION "version 1.0." @version_string@
+
+#endif  // VERSION_H
