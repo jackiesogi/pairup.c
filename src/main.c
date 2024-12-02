@@ -1,6 +1,7 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "pairup/pairup.h"
 #include "version.h"
@@ -149,6 +150,9 @@ main(int argc, char *argv[])
         print_worksheet(&worksheet);
         return 0;
     }
+
+    /* Randomize the worksheet rows to avoid bias */
+    shuffle_worksheet(&worksheet, time(NULL));
 
     /* Trigger the top-level pairup function */
     pair_result_t *result = pairup(&worksheet);

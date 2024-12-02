@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 
 typedef struct sheet_struct
@@ -21,6 +22,10 @@ read_csv (const char *path);
 int
 write_csv (sheet_t *sheet,
            const char *path);
+
+void
+shuffle_worksheet (sheet_t *sheet,
+                   uint32_t seed);
 
 char *
 get_token (FILE *stream,

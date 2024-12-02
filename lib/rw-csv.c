@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -87,6 +88,21 @@ write_csv (sheet_t *sheet,
     return 0;
 }
 
+/* Indices are specific to `pairup` */
+void
+shuffle_worksheet (sheet_t *sheet,
+                   uint32_t seed)
+{
+    srand(seed);
+    for (int i = 1; i < sheet->rows - 1; ++i)
+    {
+        int j = (rand() % (sheet->rows - 2)) + 1;
+        char **temp = sheet->data[i];
+        sheet->data[i] = sheet->data[j];
+        sheet->data[j] = temp;
+    }
+}
+
 char *
 get_token (FILE *stream,
            char *buffer,
@@ -147,7 +163,7 @@ _get_ccount (FILE *file)
 {
     int count = 0;
     char ch;
-    
+
     while ((ch = fgetc(file)) != EOF && ch != '\n')
     {
         if (ch == ',')
@@ -155,7 +171,7 @@ _get_ccount (FILE *file)
             count++;
         }
     }
-    
+
     fseek(file, 0, SEEK_SET);
     return count + 1;
 }
@@ -222,7 +238,7 @@ get_cell_from_one (sheet_t *sheet,
 
     if (cell == NULL)
     {
-        snprintf(buf, buf_size, "");
+        *buf = '\0';
     }
     else
     {
@@ -248,7 +264,7 @@ get_cell (sheet_t *sheet,
 
     if (cell == NULL)
     {
-        snprintf(buf, buf_size, "");
+        *buf = '\0';
     }
     else
     {
