@@ -4,16 +4,20 @@
 #include "pairup-types.h"
 #include "rw-csv.h"
 
-#define GREETING "Enjoy the chat :D"
+#define GREETING "Enjoy the chat with your partner!🎉"
+
+#define NOPAIRS_SUGGESTION "Dear all, there were no successful pairs today.💤 \
+Maybe you can review your available time again!"
 
 #define ALTERNATIVES_FOR_NOT_MATCHED " \n\
-you can choose to \n\
-1) take a day off (count out) \n\
-2) requesting for partners \n\
-3) leave a 4-minute up voice message and answer questions \n\
-related to weekly topic. ONLY on Monday can talk about \n\
+You can choose to \n\
+1️⃣  Take a day off (count out) \n\
+2️⃣  Requesting for partners \n\
+3️⃣  Leave a 4-minute up voice message and answer questions \
+related to weekly topic. ONLY on Monday can talk about \
 your last weekend or sharing something interesting."
 
+/* Currently not used */
 #define DEBUG_LOG_FORMATTED_MESSAGE(format, args) \
     do { \
         if (format != NULL) { \
@@ -38,7 +42,7 @@ print_graph_to_file (sheet *worksheet,
                      const char *filename);
 void
 print_digraph_to_file (sheet *worksheet,
-                     const char *filename);
+                       const char *filename);
 
 void
 display_summary (pair_result *result);

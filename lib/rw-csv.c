@@ -15,6 +15,14 @@ char *get_token(FILE *stream, char *buffer, size_t buffer_size);
 int _get_rcount(FILE *file);
 int _get_ccount(FILE *file);
 
+
+char *
+get_time_slot (sheet_t *worksheet,
+               int j)
+{
+    return worksheet->data[0][j];
+}
+
 sheet_t
 read_csv (const char *path)
 {

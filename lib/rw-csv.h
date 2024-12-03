@@ -32,6 +32,10 @@ get_token (FILE *stream,
            char *buffer,
            size_t buffer_size);
 
+char *
+get_time_slot (sheet_t *sheet,
+               int col);
+
 int
 _get_rcount (FILE *file);
 

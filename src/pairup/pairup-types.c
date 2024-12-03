@@ -72,13 +72,13 @@ pairup_options_init (struct pairup_options *x)
 }
 
 member_t *
-_new_member (void)
+new_member (void)
 {
     return (member_t *) malloc (sizeof(member_t));
 }
 
 void
-_free_member (member_t *m)
+free_member (member_t *m)
 {
     if (!m)
     {
@@ -89,13 +89,13 @@ _free_member (member_t *m)
 }
 
 pair *
-_new_pair (void)
+new_pair (void)
 {
     return (pair *) malloc (sizeof(pair));
 }
 
 void
-_free_pair (pair *p)
+free_pair (pair *p)
 {
     if (!p)
     {
@@ -106,13 +106,13 @@ _free_pair (pair *p)
 }
 
 relation *
-_new_relation (void)
+new_relation (void)
 {
     return (relation *) malloc (sizeof(relation));
 }
 
 void
-_free_relation (relation *r)
+free_relation (relation *r)
 {
     if (!r)
     {
@@ -123,13 +123,13 @@ _free_relation (relation *r)
 }
 
 relation_graph *
-_new_relation_graph (void)
+new_relation_graph (void)
 {
     return (relation_graph *) malloc (sizeof(relation_graph));
 }
 
 void
-_free_relation_graph (relation_graph *graph)
+free_relation_graph (relation_graph *graph)
 {
     // printf("graph address: %p\n", graph);
     if (!graph)
@@ -139,7 +139,7 @@ _free_relation_graph (relation_graph *graph)
 
     for (int i = 0; i < graph->count; i++)
     {
-        _free_relation (graph->relations[i]);
+        free_relation (graph->relations[i]);
         graph->relations[i] = NULL;
     }
 
@@ -147,7 +147,7 @@ _free_relation_graph (relation_graph *graph)
 }
 
 pair_result *
-_new_pair_result (int pairs,
+new_pair_result (int pairs,
                   int singles,
                   int members)
 {
@@ -167,7 +167,7 @@ _new_pair_result (int pairs,
 }
 
 void
-_free_pair_result (pair_result *result)
+free_pair_result (pair_result *result)
 {
     if (!result)
     {
@@ -176,4 +176,3 @@ _free_pair_result (pair_result *result)
 
     free(result);
 }
-

@@ -102,8 +102,8 @@ print_worksheet (sheet *worksheet)
         for (int j = 0; j < worksheet->cols; j++)
         {
             char *cell = worksheet->data[i][j];
-            int is_special_col = (j == _FILED_COL_NAME || j == _FILED_COL_END + 1);
-            int is_field_col = (j >= _FILED_COL_START && j <= _FILED_COL_END && i >= _FILED_ROW_START);
+            int is_special_col = (j == FILED_COL_NAME || j == FILED_COL_END + 1);
+            int is_field_col = (j >= FILED_COL_START && j <= FILED_COL_END && i >= FILED_ROW_START);
 
             if (is_field_col)
             {
@@ -264,7 +264,7 @@ print_graph_to_file (sheet *worksheet,
 
             if (!is_duplicate)
             {
-                char *timestr = _get_time_slot(worksheet, time);
+                char *timestr = get_time_slot(worksheet, time);
                 fprintf(file, "    \"%s\" -- \"%s\" [label=\"%s\" fontsize=7];\n",
                         source->name, target->name, timestr);
 
@@ -284,7 +284,7 @@ print_graph_to_file (sheet *worksheet,
 
     printf("Graph has been written to %s\n", filename);
 
-    _free_relation_graph(graph);
+    free_relation_graph(graph);
 }
 
 void
@@ -334,29 +334,28 @@ print_digraph_to_file (sheet *worksheet,
 
     printf("Graph has been written to %s\n", filename);
 
-    _free_relation_graph(graph);
+    free_relation_graph(graph);
 }
 
 void
 print_result (sheet *worksheet,
               pair_result *result)
 {
-    printf("%s\n", GREETING);
-
     if (result->pairs == 0)
     {
-        printf("No pairs available to display.\n");
+        printf("%s\n", NOPAIRS_SUGGESTION);
     }
-    else 
+    else
     {
+        printf("%s\n", GREETING);
         for (int i = 0; i < result->pairs; i++)
         {
             pair_t *pair = result->pair_list[i];
-            char *time = _get_time_slot(worksheet, pair->time);
+            char *time = get_time_slot(worksheet, pair->time);
             printf("@%s -- @%s (%s)\n", pair->a->name, pair->b->name, time);
         }
     }
-    
+
     printf("\n");
     printf("As for\n");
 
@@ -400,15 +399,35 @@ display_summary (pair_result *result)
     size_t REQ = result->total_requests;
     size_t SREQ = P << 1;
     size_t NREQ = NP;
-    size_t RATIO_SREQ = (SREQ * 100) / REQ;
-    size_t RATIO_NREQ = (NREQ * 100) / REQ;
 
-    printf("=======================  STATISTICS  =======================\n");
+    int RATIO_SREQ, RATIO_NREQ;
+    if (REQ == 0)
+    {
+        RATIO_SREQ = -1;
+        RATIO_NREQ = -1;
+    }
+    else
+    {
+        RATIO_SREQ = (SREQ * 100) / REQ;
+        RATIO_NREQ = (NREQ * 100) / REQ;
+    }
+
+    printf("=======================  SUMMARY  =======================\n");
     printf("Members: %zu\n", M);
     printf("Successful pairs: %zu\n", P);
     printf("Total requests: %zu\n", REQ);
-    printf("Successful requests: %zu (%zu%%)\n", SREQ, RATIO_SREQ);
-    printf("Failed requests: %zu (%zu%%)\n", NREQ, RATIO_NREQ);
+
+    if (RATIO_SREQ == -1 || RATIO_NREQ == -1)
+    {
+        printf("Successful requests: %zu\n", SREQ);
+        printf("Failed requests: %zu\n", NREQ);
+    }
+    else
+    {
+        printf("Successful requests: %zu (%d%%)\n", SREQ, RATIO_SREQ);
+        printf("Failed requests: %zu (%d%%)\n", NREQ, RATIO_NREQ);
+    }
+
     printf("Pair list:\n");
     for (int i = 0; i < result->pairs; i++)
     {
@@ -419,7 +438,7 @@ display_summary (pair_result *result)
     {
         printf("%s\n", result->single_list[i]->name);
     }
-    printf("=============================================================\n");
+    printf("=========================================================\n");
 }
 
 int debug_level = DEBUG_NONE;

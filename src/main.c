@@ -142,23 +142,25 @@ main(int argc, char *argv[])
 
     if (x.generate_graph)
     {
-        generate_graph_output_image(&worksheet, graph_output);
+        generate_graph_output_image (&worksheet, graph_output);
         return 0;
     }
     if (x.show_csv)
     {
-        print_worksheet(&worksheet);
+        print_worksheet (&worksheet);
         return 0;
     }
 
     /* Randomize the worksheet rows to avoid bias */
-    shuffle_worksheet(&worksheet, time(NULL));
+    shuffle_worksheet (&worksheet, time(NULL));
 
     /* Trigger the top-level pairup function */
-    pair_result_t *result = pairup(&worksheet);
+    pair_result_t *result = pairup (&worksheet);
 
     /* Print the result */
     print_result (&worksheet, result);
+
+    free_pair_result (result);
 
     return 0;
 }

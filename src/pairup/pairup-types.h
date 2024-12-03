@@ -8,14 +8,14 @@
 /* Maximum length of the name */
 #define  MAX_NAME_LEN     4096
 // #define  MAX_MATCHES_LEN  4096
-#define  _MAX_MATCHES_LEN  64 
-#define  _MAX_MEMBERS_LEN  64 
+#define  MAX_MATCHES_LEN  64 
+#define  MAX_MEMBERS_LEN  64 
 
 /* Boundaries for the sheet that containing real data */
-#define  _FILED_COL_NAME   0 
-#define  _FILED_ROW_START  1
-#define  _FILED_COL_START  2 
-#define  _FILED_COL_END    16
+#define  FILED_COL_NAME   0 
+#define  FILED_ROW_START  1
+#define  FILED_COL_START  2 
+#define  FILED_COL_END    16
 
 /********************************  Types aliasess  ************************************/
 
@@ -47,16 +47,6 @@ typedef struct pair_result pair_result;  // Recommended
 typedef struct pair_result result_t;
 typedef struct pair_result result;
 
-/* Pairup algorithm */
-typedef pair_result *
-(*pairup_internal) (relation_graph *today,
-                    member_t *member_list[]);
-
-typedef struct pairup_algorithm pairup_algorithm_t;
-typedef struct pairup_algorithm pairup_algorithm;  // Recommended
-typedef struct pairup_algorithm algorithm_t;
-typedef struct pairup_algorithm algorithm;
-
 /**********************************  Data types  **************************************/
 
 /* Member's info and their willingness to practice on that day */
@@ -82,11 +72,11 @@ struct pair
 struct relation
 {
     size_t count;                                 // Number of candidates for this member
-    member *candidates[_MAX_MATCHES_LEN];         // Candidates for this member
-    slot matched_slot[_MAX_MATCHES_LEN];          // Matched time slot for this member
+    member *candidates[MAX_MATCHES_LEN];         // Candidates for this member
+    slot matched_slot[MAX_MATCHES_LEN];          // Matched time slot for this member
 
     size_t availability;                          // Number of slots available on that day
-    slot available_slot[_MAX_MATCHES_LEN];        // Available time slot for this member
+    slot available_slot[MAX_MATCHES_LEN];        // Available time slot for this member
 };
 
 /* A graph represents today's matching relations between members */
@@ -95,7 +85,7 @@ struct relation
 struct relation_graph
 {
     size_t count;                                  // Number of relations
-    relation *relations[_MAX_MATCHES_LEN];  // Relations
+    relation *relations[MAX_MATCHES_LEN];  // Relations
 };
 
 /* A pair result contains the successful pairs and the remaining singles */
@@ -105,16 +95,10 @@ struct pair_result
     size_t singles;
     size_t pairs;
     size_t total_requests;
-    slot matched_slot[_MAX_MATCHES_LEN];
-    struct member *member_list[_MAX_MATCHES_LEN];
-    struct member *single_list[_MAX_MATCHES_LEN];
-    pair *pair_list[_MAX_MATCHES_LEN];
-};
-
-struct pairup_algorithm
-{
-    const char *name;
-    const pairup_internal algorithm;
+    slot matched_slot[MAX_MATCHES_LEN];
+    struct member *member_list[MAX_MATCHES_LEN];
+    struct member *single_list[MAX_MATCHES_LEN];
+    pair *pair_list[MAX_MATCHES_LEN];
 };
 
 /* For example: */
@@ -158,36 +142,35 @@ void
 pairup_options_init (struct pairup_options *x);
 
 member_t *
-_new_member (void);
+new_member (void);
 
 void
-_free_member (member_t *member);
+free_member (member_t *member);
 
 pair *
-_new_pair (void);
+new_pair (void);
 
 void
-_free_pair (pair *pair);
+free_pair (pair *pair);
 
 relation *
-_new_relation (void);
+new_relation (void);
 
 void
-_free_relation (relation *relation);
+free_relation (relation *relation);
 
 relation_graph *
-_new_relation_graph (void);
+new_relation_graph (void);
 
 void 
-_free_relation_graph (relation_graph *today);
+free_relation_graph (relation_graph *today);
 
 pair_result *
-_new_pair_result (int member,
+new_pair_result (int member,
                   int pairs,
                   int singles);
 
 void
-_free_pair_result (pair_result *result);
+free_pair_result (pair_result *result);
 
 #endif  // PAIRUP_TYPES_H
-

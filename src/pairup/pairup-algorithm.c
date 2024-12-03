@@ -8,57 +8,169 @@
 #include "pairup-formatter.h"
 #include "rw-csv.h"
 
+/* Pairup algorithm (internal) */
+typedef pair_result *
+(*pairup_internal) (relation_graph *today,
+                    member_t *member_list[]);
+
+typedef struct pairup_algorithm pairup_algorithm_t;
+typedef struct pairup_algorithm pairup_algorithm;  // Recommended
+typedef struct pairup_algorithm algorithm_t;
+typedef struct pairup_algorithm algorithm;
+
+struct pairup_algorithm
+{
+    const char *name;
+    const pairup_internal algorithm;
+};
+
 /* Various pre-defined priority */
 /* Technically, `pairup_algorithms[]` is an array with several function pointers */
 /* pointing to corresponding priority functions */
-#define _MAX_PAIRUP_ALGORITHMS 10
-const pairup_algorithm a[] = {  // WHO WILL BE PAIRED UP FIRST?
+#define MAX_PAIRUP_ALGORITHMS 10
+const pairup_algorithm a[] = {                    // WHO WILL BE PAIRED UP FIRST?
     {
         "LEAST_AVAILABILITY_PRIORITY",            // Members with least time slots filled in.
-         _pairup_least_availability_priority
+         pairup_least_availability_priority
     },
     {
         "MOST_AVAILABILITY_PRIORITY",             // Members with most time slots filled in.
-        _pairup_most_availability_priority
+        pairup_most_availability_priority
     },
     {
         "SMALLEST_ROW_ID_PRIORITY",               // Members on the first row of the sheet.
-        _pairup_smallest_row_id_priority
+        pairup_smallest_row_id_priority
     },
     {
         "LARGEST_ROW_ID_PRIORITY",                // Members on the last row of the sheet.
-        _pairup_largest_row_id_priority
+        pairup_largest_row_id_priority
     },
     {
         "EARLIEST_AVAILABLE_SLOT_PRIORITY",       // Members with the earliest time slot.
-        _pairup_earliest_available_slot_priority
+        pairup_earliest_available_slot_priority
     },
     {
         "LEAST_REQUEST_PRIORITY",                 // Members with 'one' requests.
-        _pairup_least_request_priority
+        pairup_least_request_priority
     },
     {
         "LATEST_AVAILABLE_SLOT_PRIORITY",         // Members with the latest time slot.
-        _pairup_latest_available_slot_priority
+        pairup_latest_available_slot_priority
     },
     {
         "LEAST_PARTNER_PRIORITY",                 // Members with the least number of potential partners.
-        _pairup_least_partner_priority
+        pairup_least_partner_priority
     },
     {
         "MOST_PARTNER_PRIORITY",                  // Members with the most number of potentail partners.
-        _pairup_most_partner_priority
+        pairup_most_partner_priority
     },
     {
         "MOST_REQUEST_PRIORITY",                  // Members with 'two' requests.
-        _pairup_most_request_priority
+        pairup_most_request_priority
     },
 };
 
-/* Function aliases */
-/* TODO: Rename the functions and remove the aliases */
-static int (*_preprocess_fixed_memblist) (sheet *, member *[]) = _generate_member_list;
-static void (*_preprocess_relation_graph) (sheet *, relation_graph *, member *[]) = _generate_relations;
+/********************  INTERNAL FUNCTIONS DECLARATION (START)  *********************/
+/* Generate a random integer, only for internal use */
+static int
+preprocess_fixed_memblist (sheet *worksheet,
+                           member *mlist[]);
+
+static void
+preprocess_relation_graph (sheet *worksheet,
+                           graph *today,
+                           member *mlist[]);
+
+static int
+get_random_seed (void);
+
+static int
+get_member_availability (sheet *worksheet,
+                         int id);
+
+static int
+get_member_earliest_slot (sheet *worksheet,
+                          int id);
+
+static int
+get_member_requests (sheet *worksheet,
+                     int id);
+
+static char *
+get_member_name (sheet *worksheet,
+                 int id);
+
+static int
+compare_availability_asc (const void *a,
+                          const void *b);
+
+static int
+compare_availability_desc (const void *a,
+                           const void *b);
+
+static int
+compare_row_count_asc (const void *a,
+                       const void *b);
+
+static int
+compare_row_count_desc (const void *a,
+                        const void *b);
+
+static int
+compare_id_asc (const void *a,
+                const void *b);
+
+static int
+compare_id_desc (const void *a,
+                 const void *b);
+
+static int
+compare_requests_asc (const void *a,
+                      const void *b);
+
+static int
+compare_requests_desc (const void *a,
+                       const void *b);
+
+static int
+compare_earliest_slot_asc (const void *a,
+                           const void *b);
+
+static int
+compare_earliest_slot_desc (const void *a,
+                            const void *b);
+
+static int
+find_member_id (graph *today,
+                member *member);
+
+static int
+has_time_slot (int available_slot[MAX_MEMBERS_LEN][MAX_MEMBERS_LEN],
+               int row,
+               int value);
+
+static void
+remove_from_available_slot (int available_slot[MAX_MEMBERS_LEN][MAX_MEMBERS_LEN],
+                            int row,
+                            int value);
+
+static int
+result_existed (pair_result *result,
+                member *a,
+                member *b);
+
+static void
+pairup_bfs (graph *today,
+            member *members[],
+            pair_result *result);
+
+static pair_result *
+pairup_with_priority (graph *today,
+                      member *members[],
+                      int (*compare_fn)(const void *, const void *));
+
+/*******************  INTERNAL FUNCTIONS DECLARATION (END)  ***********************/
 
 /***************************  TOP LEVEL API (START)  ******************************/
 
@@ -68,13 +180,13 @@ static void (*_preprocess_relation_graph) (sheet *, relation_graph *, member *[]
 pair_result *
 pairup (sheet *worksheet)
 {
-    relation_graph *graph = _new_relation_graph();
-    member *member_list[_MAX_MEMBERS_LEN] = { NULL };
+    relation_graph *graph = new_relation_graph();
+    member *member_list[MAX_MEMBERS_LEN] = { NULL };
 
     /* Generate relations using the existing member_list */
     /* This will take in the empty member_list and fill it with the available members */
-    _preprocess_fixed_memblist (worksheet, member_list);
-    _preprocess_relation_graph (worksheet, graph, member_list);
+    preprocess_fixed_memblist (worksheet, member_list);
+    preprocess_relation_graph (worksheet, graph, member_list);
 
     /* Initialize the best result and temporary result */
     result *best;
@@ -82,7 +194,7 @@ pairup (sheet *worksheet)
     best = temp = NULL;
     int id = -1;
 
-    for (int i = 0; i < _MAX_PAIRUP_ALGORITHMS; i++)
+    for (int i = 0; i < MAX_PAIRUP_ALGORITHMS; i++)
     {
         pairup_internal algorithm = a[i].algorithm;
 
@@ -99,7 +211,7 @@ pairup (sheet *worksheet)
         }
         else if (temp->pairs == best->pairs)
         {
-            int rand = _get_random_seed();
+            int rand = get_random_seed();
             if (rand % 2 == 0)
             {
                 should_update_best = true;
@@ -110,23 +222,24 @@ pairup (sheet *worksheet)
         {
             if (best)
             {
-                _free_pair_result(best);
+                free_pair_result(best);
             }
             best = temp;
             id = i;
         }
         else
         {
-            _free_pair_result(temp);
+            free_pair_result(temp);
         }
     }
 
+    debug_action (DEBUG_INFO, (callback)print_worksheet, (void*)worksheet);
     debug_printf (DEBUG_SUMMARY, "Best Algorithm: %s", a[id].name);
     debug_action (DEBUG_SUMMARY, (callback)display_summary, (void*)best);
     debug_printf (DEBUG_SUMMARY, "Relation Graph:");
     debug_action (DEBUG_SUMMARY, (callback)display_graph, (void*)graph);
 
-    _free_relation_graph (graph);
+    free_relation_graph (graph);
 
     return best;
 }
@@ -134,13 +247,13 @@ pairup (sheet *worksheet)
 graph *
 pairup_graph (sheet *worksheet)
 {
-    relation_graph *graph = _new_relation_graph();
-    member *member_list[_MAX_MEMBERS_LEN] = { NULL };
+    relation_graph *graph = new_relation_graph();
+    member *member_list[MAX_MEMBERS_LEN] = { NULL };
 
     /* Generate relations using the existing member_list */
     /* This will take in the empty member_list and fill it with the available members */
-    _preprocess_fixed_memblist (worksheet, member_list);
-    _preprocess_relation_graph (worksheet, graph, member_list);
+    preprocess_fixed_memblist (worksheet, member_list);
+    preprocess_relation_graph (worksheet, graph, member_list);
 
     pairup_internal algorithm = a[0].algorithm;
 
@@ -155,8 +268,8 @@ pairup_graph (sheet *worksheet)
 /***************************  TOP LEVEL API (END)  ******************************/
 
 /* Generate a random integer, ensuring srand is initialized only once */
-int
-_get_random_seed (void)
+static int
+get_random_seed (void)
 {
     static int initialized = 0; // Static variable to track initialization
 
@@ -170,13 +283,13 @@ _get_random_seed (void)
 }
 
 static int
-_get_member_availability (sheet *worksheet,
-                          int id)
+get_member_availability (sheet *worksheet,
+                         int id)
 {
     int j, count = 0;
     char cell[8];
 
-    for (j = _FILED_COL_START; j <= _FILED_COL_END; j++)
+    for (j = FILED_COL_START; j <= FILED_COL_END; j++)
     {
         get_cell (worksheet, id, j, cell, sizeof(cell));
         if (is_available(cell))
@@ -189,13 +302,13 @@ _get_member_availability (sheet *worksheet,
 }
 
 static int
-_get_member_earliest_slot (sheet *worksheet,
+get_member_earliest_slot (sheet *worksheet,
                            int id)
 {
     int j;
     char cell[8];
 
-    for (j = _FILED_COL_START; j <= _FILED_COL_END; j++)
+    for (j = FILED_COL_START; j <= FILED_COL_END; j++)
     {
         get_cell (worksheet, id, j, cell, sizeof(cell));
         if (is_available(cell))
@@ -208,13 +321,13 @@ _get_member_earliest_slot (sheet *worksheet,
 }
 
 static int
-_get_member_requests (sheet *worksheet,
-                      int id)
+get_member_requests (sheet *worksheet,
+                     int id)
 {
     int j;
     char cell[8];
 
-    for (j = _FILED_COL_START; j <= _FILED_COL_END; j++)
+    for (j = FILED_COL_START; j <= FILED_COL_END; j++)
     {
         get_cell (worksheet, id, j, cell, sizeof(cell));
         if (is_once(cell))
@@ -231,28 +344,28 @@ _get_member_requests (sheet *worksheet,
 }
 
 static char *
-_get_member_name (sheet *worksheet,
-                  int id)
+get_member_name (sheet *worksheet,
+                 int id)
 {
-    return worksheet->data[id][_FILED_COL_NAME];
+    return worksheet->data[id][FILED_COL_NAME];
 }
 
 static int
-_generate_member_list (sheet *worksheet,
-                       member *mlist[])
+preprocess_fixed_memblist (sheet *worksheet,
+                           member *mlist[])
 {
     int i, count = 0;
 
-    for (i = _FILED_ROW_START; i < worksheet->rows; i++)
+    for (i = FILED_ROW_START; i < worksheet->rows - 1; i++)
     {
-        member *member = _new_member();
+        member *member = new_member();
         member->id = i;
-        member->requests = _get_member_requests(worksheet, i);
-        member->availability = _get_member_availability(worksheet, i);
-        member->earliest_slot = _get_member_earliest_slot(worksheet, i);
+        member->requests = get_member_requests(worksheet, i);
+        member->availability = get_member_availability(worksheet, i);
+        member->earliest_slot = get_member_earliest_slot(worksheet, i);
 
-        char *name = _get_member_name (worksheet, i);
-        size_t lastchar = strnlen (name, MAX_NAME_LEN);
+        char *name = get_member_name (worksheet, i);
+        size_t lastchar = strnlen (name,MAX_NAME_LEN);
         strncpy(member->name, name, lastchar);
         member->name[lastchar] = '\0';
 
@@ -263,14 +376,7 @@ _generate_member_list (sheet *worksheet,
     return count;
 }
 
-char *
-_get_time_slot (sheet *worksheet,
-               int j)
-{
-    return worksheet->data[0][j];
-}
-
-/************************************************************************************/
+/********************  COMPARISON FUNCTIONS FOR QSORT (START)  ********************/
 
 /* Compare functions for qsort */
 static int
@@ -378,15 +484,17 @@ compare_earliest_slot_desc (const void *a,
 }
 
 /* TODO: Record the modified time and implement this function */
-static int
-compare_first_modified_asc ()
-{
-    return 0;
-}
+// static int
+// compare_first_modified_asc ()
+// {
+//     return 0;
+// }
+
+/*********************  COMPARISON FUNCTIONS FOR QSORT (END)  *********************/
 
 static int
-_find_member_id (graph *today,
-                 member *member)
+find_member_id (graph *today,
+                member *member)
 {
     for (int i = 0; i < today->count; i++)
     {
@@ -402,9 +510,9 @@ _find_member_id (graph *today,
 #define DEFAULT_PRIORITY 0
 
 static void 
-_generate_relations (sheet *worksheet,
-                     graph *today,
-                     member *mlist[])
+preprocess_relation_graph (sheet *worksheet,
+                           graph *today,
+                           member *mlist[])
 {
     int i, j, k;
     char cell[8];
@@ -412,13 +520,13 @@ _generate_relations (sheet *worksheet,
     today->count = 0;
 
     /* Scan each row (members' name) */
-    for (i = _FILED_ROW_START; i < worksheet->rows-1; i++)
+    for (i = FILED_ROW_START; i < worksheet->rows-1; i++)
     {
         first = true;
         relation *row = NULL;
 
         /* Scan each column (time slots) */
-        for (j = _FILED_COL_START; j <= _FILED_COL_END; j++)
+        for (j = FILED_COL_START; j <= FILED_COL_END; j++)
         {
             get_cell(worksheet, i, j, cell, sizeof(cell));
 
@@ -428,7 +536,7 @@ _generate_relations (sheet *worksheet,
                 if (first)
                 {
                     /* Allocate memory for this member and initialize */
-                    row = _new_relation();
+                    row = new_relation();
                     row->availability = 0;
                     row->matched_slot[0] = -1;  // no one will be paired with himself/herself
                     row->candidates[0] = mlist[i];
@@ -443,13 +551,13 @@ _generate_relations (sheet *worksheet,
                 row->availability++;
 
                 /* Search in the same column to find matching count */
-                for (k = _FILED_ROW_START; k < worksheet->rows-1; k++)
+                for (k = FILED_ROW_START; k < worksheet->rows-1; k++)
                 {
                     get_cell(worksheet, k, j, cell, sizeof(cell));
 
                     if (is_available(cell) && k != i)
                     {
-                        if (row->count >= _MAX_MATCHES_LEN - 1)
+                        if (row->count >= MAX_MATCHES_LEN - 1)
                         {
                             break;
                         }
@@ -459,18 +567,20 @@ _generate_relations (sheet *worksheet,
                         row->count++;
                     }
                 }
+
+                // printf("Row %d has %zu candidates\n", i, row->count);
             }
         }
     }
 }
 
 static int 
-_has_time_slot (int available_slot[_MAX_MEMBERS_LEN][_MAX_MEMBERS_LEN],
+has_time_slot (int available_slot[MAX_MEMBERS_LEN][MAX_MEMBERS_LEN],
                 int row,
                 int value)
 {
     // printf("Checking row %d for time slot %d\n", row, value);
-    for (int i = 0; i < _MAX_MEMBERS_LEN; i++)
+    for (int i = 0; i < MAX_MEMBERS_LEN; i++)
     {
         if (available_slot[row][i] == value)
         {
@@ -482,12 +592,12 @@ _has_time_slot (int available_slot[_MAX_MEMBERS_LEN][_MAX_MEMBERS_LEN],
 }
 
 static void
-_remove_from_available_slot (int available_slot[_MAX_MEMBERS_LEN][_MAX_MEMBERS_LEN],
+remove_from_available_slot (int available_slot[MAX_MEMBERS_LEN][MAX_MEMBERS_LEN],
                              int row,
                              int value)
 {
     int i;
-    for (i = 0; i < _MAX_MEMBERS_LEN; i++)
+    for (i = 0; i < MAX_MEMBERS_LEN; i++)
     {
         if (available_slot && available_slot[row][i] == value)
         {
@@ -498,7 +608,7 @@ _remove_from_available_slot (int available_slot[_MAX_MEMBERS_LEN][_MAX_MEMBERS_L
 }
 
 static int
-_result_existed (pair_result *result,
+result_existed (pair_result *result,
                  member *a,
                  member *b)
 {
@@ -515,12 +625,12 @@ _result_existed (pair_result *result,
 }
 
 static void 
-_pairup_bfs (graph *today,
+pairup_bfs (graph *today,
              member *members[],
              pair_result *result)
 {
     /* Array that records the remaining time requested by each member */
-    int remain[_MAX_MEMBERS_LEN] = { 0 };
+    int remain[MAX_MEMBERS_LEN] = { 0 };
     int total_requests = 0;
     // printf("Original request of each member:\n");
     for (int i = 0; i < today->count; i++)
@@ -533,8 +643,8 @@ _pairup_bfs (graph *today,
                 // remain[i]);
     }
 
-    int available_slot[_MAX_MATCHES_LEN][_MAX_MATCHES_LEN];
-    int matched_slot[_MAX_MATCHES_LEN][_MAX_MATCHES_LEN];
+    int available_slot[MAX_MATCHES_LEN][MAX_MATCHES_LEN];
+    int matched_slot[MAX_MATCHES_LEN][MAX_MATCHES_LEN];
 
     for (int i = 0; i < today->count; i++)
     {
@@ -567,11 +677,11 @@ _pairup_bfs (graph *today,
         /* Pair up the members */
         for (j = 1; j < row->count; j++)
         {
-            int bi = _find_member_id(today, row->candidates[j]);
+            int bi = find_member_id(today, row->candidates[j]);
 
             if (remain[bi] <= 0 || 
-                !_has_time_slot(available_slot, i, matched_slot[i][j]) ||
-                !_has_time_slot(available_slot, bi, matched_slot[i][j]) ||
+                !has_time_slot(available_slot, i, matched_slot[i][j]) ||
+                !has_time_slot(available_slot, bi, matched_slot[i][j]) ||
                 !row->candidates[j])
             {
                 continue;
@@ -579,7 +689,7 @@ _pairup_bfs (graph *today,
 
             b = row->candidates[j];
 
-            if (_result_existed(result, b, a))
+            if (result_existed(result, b, a))
             {
                 continue;
             }
@@ -589,21 +699,22 @@ _pairup_bfs (graph *today,
                 remain[i]--;
                 remain[bi]--;
 
-                pair *pair = _new_pair();
+                pair *pair = new_pair();
                 pair->a = a;
                 pair->b = b;
                 pair->time = row->matched_slot[j];
                 result->pair_list[result->pairs] = pair;
                 result->pairs++;
 
-                _remove_from_available_slot(available_slot, i, matched_slot[i][j]);
-                _remove_from_available_slot(available_slot, bi, matched_slot[i][j]);
+                remove_from_available_slot(available_slot, i, matched_slot[i][j]);
+                remove_from_available_slot(available_slot, bi, matched_slot[i][j]);
             }
 
-            result->total_requests = total_requests;
             break;
         }
     }
+
+    result->total_requests = total_requests;
 
     /* Record the remaining singles */
     for (int i = 0; i < today->count; i++)
@@ -623,12 +734,12 @@ _pairup_bfs (graph *today,
 
 /* TODO: Sort not only rows but also elements in that row */
 static pair_result *
-_pairup_with_priority (graph *today,
+pairup_with_priority (graph *today,
                        member *members[],
                        int (*compare_fn)(const void *, const void *))
 {
     /* Initialize the result */
-    pair_result *result = _new_pair_result(0, 0, 0);
+    pair_result *result = new_pair_result(0, 0, 0);
 
     /* Sort the members based on the provided comparison function */
     qsort(today->relations, today->count, sizeof(relation *), compare_fn);
@@ -637,7 +748,7 @@ _pairup_with_priority (graph *today,
     debug_action(DEBUG_INFO, (callback)display_graph, (void*)today);
 
     /* Pair up the members */
-    _pairup_bfs(today, members, result);
+    pairup_bfs(today, members, result);
 
     debug_printf(DEBUG_INFO, "Pair result summary:\n");
     debug_action(DEBUG_INFO, (callback)display_summary, (void*)result);
@@ -645,72 +756,72 @@ _pairup_with_priority (graph *today,
     return result;
 }
 
-static pair_result *
-_pairup_least_availability_priority (graph *graph,
-                                     member *members[])
-{
-    return _pairup_with_priority(graph, members, compare_availability_asc);
-}
-
-static pair_result *
-_pairup_most_availability_priority (graph *graph,
+pair_result *
+pairup_least_availability_priority (graph *graph,
                                     member *members[])
 {
-    return _pairup_with_priority(graph, members, compare_availability_desc);
+    return pairup_with_priority(graph, members, compare_availability_asc);
 }
 
-static pair_result *
-_pairup_smallest_row_id_priority (graph *graph,
-                                  member *members[])
+pair_result *
+pairup_most_availability_priority (graph *graph,
+                                   member *members[])
 {
-    return _pairup_with_priority(graph, members, compare_id_asc);
+    return pairup_with_priority(graph, members, compare_availability_desc);
 }
 
-static pair_result *
-_pairup_largest_row_id_priority (graph *graph,
+pair_result *
+pairup_smallest_row_id_priority (graph *graph,
                                  member *members[])
 {
-    return _pairup_with_priority(graph, members, compare_id_desc);
+    return pairup_with_priority(graph, members, compare_id_asc);
 }
 
-static pair_result *
-_pairup_earliest_available_slot_priority (graph *graph,
-                                           member *members[])
-{
-    return _pairup_with_priority(graph, members, compare_earliest_slot_asc);
-}
-
-static pair_result *
-_pairup_latest_available_slot_priority (graph *graph,
-                                        member *members[])
-{
-    return _pairup_with_priority(graph, members, compare_earliest_slot_desc);
-}
-
-static pair_result *
-_pairup_least_partner_priority (graph *graph,
+pair_result *
+pairup_largest_row_id_priority (graph *graph,
                                 member *members[])
 {
-    return _pairup_with_priority(graph, members, compare_row_count_asc);
+    return pairup_with_priority(graph, members, compare_id_desc);
 }
 
-static pair_result *
-_pairup_most_partner_priority (graph *graph,
+pair_result *
+pairup_earliest_available_slot_priority (graph *graph,
+                                         member *members[])
+{
+    return pairup_with_priority(graph, members, compare_earliest_slot_asc);
+}
+
+pair_result *
+pairup_latest_available_slot_priority (graph *graph,
+                                       member *members[])
+{
+    return pairup_with_priority(graph, members, compare_earliest_slot_desc);
+}
+
+pair_result *
+pairup_least_partner_priority (graph *graph,
                                member *members[])
 {
-    return _pairup_with_priority(graph, members, compare_row_count_desc);
+    return pairup_with_priority(graph, members, compare_row_count_asc);
 }
 
-static pair_result *
-_pairup_least_request_priority (graph *graph,
-                                member *members[])
+pair_result *
+pairup_most_partner_priority (graph *graph,
+                              member *members[])
 {
-    return _pairup_with_priority(graph, members, compare_requests_asc);
+    return pairup_with_priority(graph, members, compare_row_count_desc);
 }
 
-static pair_result *
-_pairup_most_request_priority (graph *graph,
+pair_result *
+pairup_least_request_priority (graph *graph,
                                member *members[])
 {
-    return _pairup_with_priority(graph, members, compare_requests_desc);
+    return pairup_with_priority(graph, members, compare_requests_asc);
+}
+
+pair_result *
+pairup_most_request_priority (graph *graph,
+                              member *members[])
+{
+    return pairup_with_priority(graph, members, compare_requests_desc);
 }
