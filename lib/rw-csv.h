@@ -37,10 +37,10 @@ get_time_slot (sheet_t *sheet,
                int col);
 
 int
-_get_rcount (FILE *file);
+get_rcount (FILE *file);
 
 int
-_get_ccount (FILE *file);
+get_ccount (FILE *file);
 
 void
 free_sheet (sheet_t **sheet);

@@ -12,8 +12,8 @@ typedef struct sheet_struct
 } sheet_t;
 
 char *get_token(FILE *stream, char *buffer, size_t buffer_size);
-int _get_rcount(FILE *file);
-int _get_ccount(FILE *file);
+int get_rcount(FILE *file);
+int get_ccount(FILE *file);
 
 
 char *
@@ -35,8 +35,8 @@ read_csv (const char *path)
 
     sheet_t sheet;
     sheet.path = strdup(path);
-    sheet.rows = _get_rcount(file);
-    sheet.cols = _get_ccount(file);
+    sheet.rows = get_rcount(file);
+    sheet.cols = get_ccount(file);
 
     sheet.data = (char ***) malloc (sheet.rows * sizeof(char **));
     if (!sheet.data)
@@ -145,7 +145,7 @@ get_token (FILE *stream,
 
 /* Get the number of rows in the file */
 int
-_get_rcount (FILE *file)
+get_rcount (FILE *file)
 {
     int count = 0;
     int ch;
@@ -167,7 +167,7 @@ _get_rcount (FILE *file)
 }
 
 int
-_get_ccount (FILE *file)
+get_ccount (FILE *file)
 {
     int count = 0;
     int ch;
