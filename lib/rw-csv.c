@@ -117,7 +117,7 @@ get_token (FILE *stream,
            size_t buffer_size)
 {
     int i = 0;
-    char ch;
+    int ch;
 
     while ((ch = fgetc(stream)) != ',' && ch != '\n' && ch != EOF)
     {
@@ -148,7 +148,7 @@ int
 _get_rcount (FILE *file)
 {
     int count = 0;
-    char ch;
+    int ch;
     int has_content = 0;
 
     while ((ch = fgetc(file)) != EOF) {
@@ -170,7 +170,7 @@ int
 _get_ccount (FILE *file)
 {
     int count = 0;
-    char ch;
+    int ch;
 
     while ((ch = fgetc(file)) != EOF && ch != '\n')
     {
