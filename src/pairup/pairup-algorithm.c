@@ -732,7 +732,6 @@ pairup_bfs (graph *today,
     }
 }
 
-/* TODO: Sort not only rows but also elements in that row */
 static pair_result *
 pairup_with_priority (graph *today,
                        member *members[],

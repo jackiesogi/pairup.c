@@ -6,7 +6,6 @@
 
 /* Public Access API */
 /* Note that the result should be freed by the caller */
-/* TODO: Implement all the algorithms and choose the best one */
 pair_result_t *
 pairup (sheet *sheet);
 
