@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,12 +14,47 @@ const char *twice_sign[] = {"2", "twice"};
 
 /**********************************  Helper functions  **********************************/
 
+/* Remove spaces from the string */
+void remove_spaces (const char *str, char *result)
+{
+    while (*str != '\0')
+    {
+        if (*str != ' ')
+        {
+            *result++ = *str;
+        }
+        str++;
+    }
+    *result = '\0';
+}
+
+/* Convert the string to lower case */
+void to_upper (const char *str, char *result)
+{
+    while (*str != '\0')
+    {
+        *result++ = toupper(*str);
+        str++;
+    }
+    *result = '\0';
+}
+
+/* Normalize the string */
+void normalize (const char *str, char *result)
+{
+    remove_spaces(str, result);
+    to_upper(result, result);
+}
+
 /* Check if the sign represents 'practice zero time' */
 bool is_zero (const char *sign)
 {
+    char src[10], dst[10];
     for (int i = 0; i < sizeof(zero_sign) / sizeof(zero_sign[0]); i++)
     {
-        if (strcmp(sign, zero_sign[i]) == 0)
+        normalize(sign, src);
+        normalize(zero_sign[i], dst);
+        if (strcmp(src, dst) == 0)
         {
             return true;
         }
@@ -29,9 +65,12 @@ bool is_zero (const char *sign)
 /* Check if the sign represents 'practice one time' */
 bool is_once (const char *sign)
 {
+    char src[10], dst[10];
     for (int i = 0; i < sizeof(once_sign) / sizeof(once_sign[0]); i++)
     {
-        if (strcmp(sign, once_sign[i]) == 0)
+        normalize(sign, src);
+        normalize(once_sign[i], dst);
+        if (strcmp(src, dst) == 0)
         {
             return true;
         }
@@ -42,9 +81,12 @@ bool is_once (const char *sign)
 /* Check if the sign represents 'practice two times' */
 bool is_twice (const char *sign)
 {
+    char src[10], dst[10];
     for (int i = 0; i < sizeof(twice_sign) / sizeof(twice_sign[0]); i++)
     {
-        if (strcmp(sign, twice_sign[i]) == 0)
+        normalize(sign, src);
+        normalize(twice_sign[i], dst);
+        if (strcmp(src, dst) == 0)
         {
             return true;
         }
