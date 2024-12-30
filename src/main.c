@@ -1,7 +1,9 @@
 #include <getopt.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "pairup/pairup.h"
 #include "version.h"
@@ -71,9 +73,21 @@ static struct option const long_options[] =
     {NULL, 0, NULL, 0}
 };
 
+void
+sigsegv_handler(int sig) {
+    fprintf(stdout, "The worksheet format is incorrect. Please check the content on Google Sheets with the following format rules, or contact the developer:\n\
+(1) No extra characters should appear outside the main table.\n\
+(2) There should be no empty rows between members.\n\
+(3) There should be no empty columns between the time slots.\n\
+(4) The number of members should not exceed 64. (If so, contact the developer to scale it up.)\n");
+    exit(EXIT_FAILURE);
+}
+
 int
 main(int argc, char *argv[])
 {
+    signal(SIGSEGV, sigsegv_handler);
+
     /* Flags for command line arguments */
     struct pairup_options x;
     pairup_options_init(&x);
