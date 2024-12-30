@@ -34,8 +34,19 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
+# Call git to get the author name of the latest commit
+execute_process(
+    COMMAND git log --oneline --pretty=format:"%an" -n 1
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_AUTHOR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
 # Set the version string with the retrieved Git commit hash
 set(version_string ${GIT_HASH})
+
+# Set the author name
+set(author_name ${GIT_AUTHOR})
 
 # Ensure the version string is passed as a quoted string to the C preprocessor
 configure_file(
