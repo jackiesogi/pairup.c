@@ -4,16 +4,16 @@
 #include "pairup-types.h"
 #include "rw-csv.h"
 
-#define GREETING "Enjoy the chat with your partner!🎉"
+#define GREETING "Enjoy the chat with your partner!💬"
 
 #define NOPAIRS_SUGGESTION "Dear all, there were no successful pairs today.💤 \
 Maybe you can review your available time again!"
 
 #define ALTERNATIVES_FOR_NOT_MATCHED " \n\
 You can choose to \n\
-1️⃣  Take a day off (count out) \n\
-2️⃣  Requesting for partners \n\
-3️⃣  Leave a 4-minute up voice message and answer questions \
+👉 Take a day off (count out) \n\
+👉 Requesting for partners \n\
+👉 Leave a 4-minute up voice message and answer questions \
 related to weekly topic. ONLY on Monday can talk about \
 your last weekend or sharing something interesting."
 
