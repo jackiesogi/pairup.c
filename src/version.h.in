@@ -3,7 +3,7 @@
 
 /* Program version format: version <major>.<minor>.<patch> */
 #define PROGRAM_VERSION "pairup version 1.0." @version_string@ "\n" \
-"Copyright (C) 2024 " @author_name@ "\n" \
+"Copyright (C) 2025 " @author_name@ "\n" \
 "License GPLv3: GNU GPL version 3 <https://www.gnu.org/licenses/gpl-3.0.html>.\n" \
 "This is free software: you are free to change and redistribute it.\n" \
 "There is NO WARRANTY, to the extent permitted by law."
