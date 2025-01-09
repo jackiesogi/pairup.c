@@ -6,11 +6,11 @@
 
 /********************************  Number of practices  *********************************/
 
-const char *zero_sign[] = {"0", " "};
+const char *zero_sign[] = {"0", "０", " "};
 
-const char *once_sign[] = {"1", "V", "v", "X", "x", "once"};
+const char *once_sign[] = {"1", "１", "V", "v", "X", "x", "Ｖ", "ｖ", "Ｘ", "ｘ", "once"};
 
-const char *twice_sign[] = {"2", "twice"};
+const char *twice_sign[] = {"2", "２", "twice"};
 
 /**********************************  Helper functions  **********************************/
 
