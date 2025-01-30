@@ -27,7 +27,6 @@ struct pairup_algorithm
 /* Various pre-defined priority */
 /* Technically, `pairup_algorithms[]` is an array with several function pointers */
 /* pointing to corresponding priority functions */
-#define MAX_PAIRUP_ALGORITHMS 10
 const pairup_algorithm a[] = {                    // WHO WILL BE PAIRED UP FIRST?
     {
         "LEAST_AVAILABILITY_PRIORITY",            // Members with least time slots filled in.
@@ -68,6 +67,10 @@ const pairup_algorithm a[] = {                    // WHO WILL BE PAIRED UP FIRST
     {
         "MOST_REQUEST_PRIORITY",                  // Members with 'two' requests.
         pairup_most_request_priority
+    },
+    {
+        NULL,                                     // Terminating condition
+        NULL
     },
 };
 
@@ -194,7 +197,7 @@ pairup (sheet *worksheet)
     best = temp = NULL;
     int id = -1;
 
-    for (int i = 0; i < MAX_PAIRUP_ALGORITHMS; i++)
+    for (int i = 0; a[i].algorithm != NULL; i++)
     {
         pairup_internal algorithm = a[i].algorithm;
 
