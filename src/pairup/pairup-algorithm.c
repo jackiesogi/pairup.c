@@ -234,6 +234,12 @@ pairup (sheet *worksheet)
         {
             free_pair_result(temp);
         }
+
+        if (best->total_requests == (best->pairs << 1))
+        {
+            debug_printf (DEBUG_INFO, "Found the maximum matches, stop searching!\n");
+            break;
+        }
     }
 
     debug_action (DEBUG_INFO, (callback)print_worksheet, (void*)worksheet);
