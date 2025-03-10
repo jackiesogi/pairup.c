@@ -24,7 +24,7 @@ usage (int status)
 {
     if (status != EXIT_SUCCESS)
     {
-        emit_try_help ();
+        emit_try_help();
     }
     else
     {
@@ -52,7 +52,7 @@ For more information, see <https://github.com/jackiesogi/pairup.c>.\n\
 }
 
 bool
-has_installed_graphviz()
+has_installed_graphviz ()
 {
     if (system("which dot > /dev/null") == 0)
         return true;
@@ -74,8 +74,8 @@ static struct option const long_options[] =
 };
 
 void
-sigsegv_handler(int sig) {
-    fprintf(stdout, "The worksheet format is incorrect. Please check the content on Google Sheets with the following format rules, or contact the developer:\n\
+sigsegv_handler (int sig) {
+    fprintf (stdout, "The worksheet format is incorrect. Please check the content on Google Sheets with the following format rules, or contact the developer:\n\
 (1) No extra characters should appear outside the main table.\n\
 (2) There should be no empty rows between members.\n\
 (3) There should be no empty columns between the time slots.\n\
@@ -84,13 +84,13 @@ sigsegv_handler(int sig) {
 }
 
 int
-main(int argc, char *argv[])
+main (int argc, char *argv[])
 {
-    signal(SIGSEGV, sigsegv_handler);
+    signal (SIGSEGV, sigsegv_handler);
 
     /* Flags for command line arguments */
     struct pairup_options x;
-    pairup_options_init(&x);
+    pairup_options_init (&x);
     char graph_output[1024];
 
     /* Parse the command line arguments using while loop */
@@ -100,33 +100,33 @@ main(int argc, char *argv[])
         switch (c)
         {
             case 'd':
-                x.debug_level = atoi(optarg);
-                debug_level = atoi(optarg);
+                x.debug_level = atoi (optarg);
+                debug_level = atoi (optarg);
                 break;
             case 'g':
                 if (!has_installed_graphviz())
                 {
-                    fprintf(stderr, "Please install package `graphviz` first\n");
-                    exit(EXIT_FAILURE);
+                    fprintf (stderr, "Please install package `graphviz` first\n");
+                    exit (EXIT_FAILURE);
                 }
                 x.generate_graph = true;
                 if (optarg)
-                    strcpy(graph_output, (const char *)optarg);
+                    strcpy (graph_output, (const char *)optarg);
                 else
-                    strcpy(graph_output, "relations.png");
+                    strcpy (graph_output, "relations.png");
                 break;
             case 's':
                 x.show_csv = true;
                 break;
             case 'e':
                 x.ensure = true;
-                printf("Not implemented yet\n");
-                exit(EXIT_FAILURE);
+                printf ("Not implemented yet\n");
+                exit (EXIT_FAILURE);
                 break;
             case 'p':
                 x.priority = true;
-                printf("Not implemented yet\n");
-                exit(EXIT_FAILURE);
+                printf ("Not implemented yet\n");
+                exit (EXIT_FAILURE);
                 break;
             case 'v':
                 printf ("%s\n", PROGRAM_VERSION);

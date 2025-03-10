@@ -33,7 +33,7 @@ void to_upper (const char *str, char *result)
 {
     while (*str != '\0')
     {
-        *result++ = toupper(*str);
+        *result++ = toupper (*str);
         str++;
     }
     *result = '\0';
@@ -42,8 +42,8 @@ void to_upper (const char *str, char *result)
 /* Normalize the string */
 void normalize (const char *str, char *result)
 {
-    remove_spaces(str, result);
-    to_upper(result, result);
+    remove_spaces (str, result);
+    to_upper (result, result);
 }
 
 /* Check if the sign represents 'practice zero time' */
@@ -52,8 +52,8 @@ bool is_zero (const char *sign)
     char src[10], dst[10];
     for (int i = 0; i < sizeof(zero_sign) / sizeof(zero_sign[0]); i++)
     {
-        normalize(sign, src);
-        normalize(zero_sign[i], dst);
+        normalize (sign, src);
+        normalize (zero_sign[i], dst);
         if (strcmp(src, dst) == 0)
         {
             return true;
@@ -68,8 +68,8 @@ bool is_once (const char *sign)
     char src[10], dst[10];
     for (int i = 0; i < sizeof(once_sign) / sizeof(once_sign[0]); i++)
     {
-        normalize(sign, src);
-        normalize(once_sign[i], dst);
+        normalize (sign, src);
+        normalize (once_sign[i], dst);
         if (strcmp(src, dst) == 0)
         {
             return true;
@@ -84,8 +84,8 @@ bool is_twice (const char *sign)
     char src[10], dst[10];
     for (int i = 0; i < sizeof(twice_sign) / sizeof(twice_sign[0]); i++)
     {
-        normalize(sign, src);
-        normalize(twice_sign[i], dst);
+        normalize (sign, src);
+        normalize (twice_sign[i], dst);
         if (strcmp(src, dst) == 0)
         {
             return true;
@@ -190,13 +190,13 @@ free_relation_graph (relation_graph *graph)
 
 pair_result *
 new_pair_result (int pairs,
-                  int singles,
-                  int members)
+                 int singles,
+                 int members)
 {
-    pair_result *result = (pair_result *)malloc(sizeof(pair_result));
+    pair_result *result = (pair_result *) malloc (sizeof(pair_result));
     if (result == NULL)
     {
-        fprintf(stderr, "Memory allocation failed for pair_result\n");
+        fprintf (stderr, "Memory allocation failed for pair_result\n");
         return NULL;
     }
 
@@ -216,5 +216,5 @@ free_pair_result (pair_result *result)
         return;
     }
 
-    free(result);
+    free (result);
 }

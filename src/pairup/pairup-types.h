@@ -167,8 +167,8 @@ free_relation_graph (relation_graph *today);
 
 pair_result *
 new_pair_result (int member,
-                  int pairs,
-                  int singles);
+                 int pairs,
+                 int singles);
 
 void
 free_pair_result (pair_result *result);

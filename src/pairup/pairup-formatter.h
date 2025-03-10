@@ -21,8 +21,8 @@ your last weekend or sharing something interesting."
 #define DEBUG_LOG_FORMATTED_MESSAGE(format, args) \
     do { \
         if (format != NULL) { \
-            vprintf(format, args); \
-            printf("\n"); \
+            vprintf (format, args); \
+            printf ("\n"); \
         } \
     } while (0)
 
@@ -61,8 +61,8 @@ display_graph (void *graph);
 /* Macros to log messages */
 #define log_message(file, fmt, ...) \
     do { \
-        fprintf(file, fmt, ##__VA_ARGS__); \
-    } while(0)
+        fprintf (file, fmt, ##__VA_ARGS__); \
+    } while (0)
 
 
 /* Macros to log messages or perform actions based on debug level */
@@ -85,7 +85,7 @@ typedef void (*callback)(void *context);
 #define GRAPH_STATS_MESSAGE    "Displaying relation graph...\n"
 
 /* Function to handle conditional logging or callback execution based on debug level */
-void do_if_debug_level_is_greater(int level,
+void do_if_debug_level_is_greater (int level,
                                   callback fptr,
                                   void *context,
                                   const char *fmt, ...);

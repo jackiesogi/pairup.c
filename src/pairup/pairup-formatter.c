@@ -25,10 +25,10 @@ get_display_width (const char *str)
         else
         {
             wchar_t wc;
-            int len = mbtowc(&wc, str, MB_CUR_MAX);
+            int len = mbtowc (&wc, str, MB_CUR_MAX);
             if (len > 0)
             {
-                width += wcwidth(wc); // Calculate the width of the character
+                width += wcwidth (wc); // Calculate the width of the character
                 str += len;           // Skip the character
             }
             else
@@ -59,10 +59,10 @@ print_truncated (const char *str,
         else
         {
             wchar_t wc;
-            int len = mbtowc(&wc, str, MB_CUR_MAX);
+            int len = mbtowc (&wc, str, MB_CUR_MAX);
             if (len > 0)
             {
-                int wc_width = wcwidth(wc);
+                int wc_width = wcwidth (wc);
                 if (current_width + wc_width > max_width) break;
                 current_width += wc_width;
                 str += len;
@@ -75,27 +75,27 @@ print_truncated (const char *str,
     }
 
     /* Print the truncated string */
-    fwrite(start, 1, str - start, stdout);
+    fwrite (start, 1, str - start, stdout);
 
     /* Use ANSI escape to move cursor and fill remaining spaces */
     if (current_width < max_width)
     {
-        printf("\033[%dC", max_width - current_width); // Move cursor right
+        printf ("\033[%dC", max_width - current_width); // Move cursor right
     }
 }
 
 void
 print_worksheet (sheet *worksheet)
 {
-    setlocale(LC_CTYPE, ""); // Set locale for wide character support
+    setlocale (LC_CTYPE, ""); // Set locale for wide character support
 
     const int default_col_width = 10; // Default column width
     const int special_col_width = 14; // Special column width
 
-    printf("rows: %d\n", worksheet->rows);
-    printf("cols: %d\n", worksheet->cols);
-    printf("path: %s\n", worksheet->path);
-    printf("data:\n");
+    printf ("rows: %d\n", worksheet->rows);
+    printf ("cols: %d\n", worksheet->cols);
+    printf ("path: %s\n", worksheet->path);
+    printf ("data:\n");
 
     for (int i = 0; i < worksheet->rows; i++)
     {
@@ -107,15 +107,15 @@ print_worksheet (sheet *worksheet)
 
             if (is_field_col)
             {
-                printf("    "); // Bold text
-                print_truncated(cell ? cell : "", default_col_width - 4);
+                printf ("    "); // Bold text
+                print_truncated (cell ? cell : "", default_col_width - 4);
                 continue;
             }
 
             int col_width = is_special_col ? special_col_width : default_col_width;
-            print_truncated(cell ? cell : "", col_width);
+            print_truncated (cell ? cell : "", col_width);
         }
-        printf("\n");
+        printf ("\n");
     }
 }
 
@@ -135,10 +135,10 @@ calculate_dpi (int line_count)
 int
 count_lines (const char *filename)
 {
-    FILE *file = fopen(filename, "r");
+    FILE *file = fopen (filename, "r");
     if (!file)
     {
-        perror("Error opening file");
+        perror ("Error opening file");
         return 0;
     }
 
@@ -150,34 +150,34 @@ count_lines (const char *filename)
             lines++;
     }
 
-    fclose(file);
+    fclose (file);
     return lines;
 }
 
 void
-generate_graph_output_image(sheet *worksheet,
-                            const char *filename)
+generate_graph_output_image (sheet *worksheet,
+                             const char *filename)
 {
     char dotfile[1024];
-    strcpy(dotfile, filename);
-    strcat(dotfile, ".dot");
+    strcpy (dotfile, filename);
+    strcat (dotfile, ".dot");
 
-    print_graph_to_file(worksheet, dotfile);
+    print_graph_to_file (worksheet, dotfile);
 
-    int line_count = count_lines(dotfile);
-    int dpi = calculate_dpi(line_count);
+    int line_count = count_lines (dotfile);
+    int dpi = calculate_dpi (line_count);
 
     char command[2048];
-    snprintf(command, sizeof(command), "dot -Tpng -Gdpi=%d %s -o %s", dpi, dotfile, filename);
+    snprintf (command, sizeof(command), "dot -Tpng -Gdpi=%d %s -o %s", dpi, dotfile, filename);
 
-    int ret = system(command);
+    int ret = system (command);
 
     if (ret != 0)
     {
-        fprintf(stderr, "Error: failed to generate graph image\n");
+        fprintf (stderr, "Error: failed to generate graph image\n");
         return;
     }
-    printf("Graph image has been generated to %s\n", filename);
+    printf ("Graph image has been generated to %s\n", filename);
 }
 
 void
@@ -185,36 +185,36 @@ print_graph_to_file (sheet *worksheet,
                      const char *filename)
 {
     printf("Output: %s\n", filename);
-    FILE *file = fopen(filename, "w");
+    FILE *file = fopen (filename, "w");
     if (file == NULL)
     {
-        fprintf(stderr, "Error: cannot open file %s\n", filename);
+        fprintf (stderr, "Error: cannot open file %s\n", filename);
         return;
     }
 
-    fprintf(file, "graph G {\n");
-    fprintf(file,"    /* File attributes */\n");
-    fprintf(file,"    size=\"6,4\";\n    ratio=fill;\n");
+    fprintf (file, "graph G {\n");
+    fprintf (file,"    /* File attributes */\n");
+    fprintf (file,"    size=\"6,4\";\n    ratio=fill;\n");
 
-    relation_graph_t *graph = pairup_graph(worksheet);
+    relation_graph_t *graph = pairup_graph (worksheet);
     if (graph == NULL)
     {
-        fprintf(stderr, "Error: failed to generate graph\n");
-        fclose(file);
+        fprintf (stderr, "Error: failed to generate graph\n");
+        fclose (file);
         return;
     }
 
-    fprintf(file, "\n    /* Node attributes */\n");
+    fprintf (file, "\n    /* Node attributes */\n");
     for (size_t i = 0; i < graph->count; i++)
     {
         relation_t *relation = graph->relations[i];
         member *member = relation->candidates[0];
 
-        fprintf(file, "    \"%s\" [label=\"%s: %zu\"];\n",
-                member->name, member->name, member->requests);
+        fprintf (file, "    \"%s\" [label=\"%s: %zu\"];\n",
+                 member->name, member->name, member->requests);
     }
 
-    fprintf(file, "\n    /* Edge relations */\n");
+    fprintf (file, "\n    /* Edge relations */\n");
 
     size_t edge_count = 0;
     for (size_t i = 0; i < graph->count; i++)
@@ -229,11 +229,11 @@ print_graph_to_file (sheet *worksheet,
         slot time;
     } edge_t;
 
-    edge_t *printed_edges = (edge_t *)malloc(edge_count * sizeof(edge_t));
+    edge_t *printed_edges = (edge_t *) malloc (edge_count * sizeof(edge_t));
     if (!printed_edges)
     {
-        fprintf(stderr, "Error: failed to allocate memory for edges\n");
-        fclose(file);
+        fprintf (stderr, "Error: failed to allocate memory for edges\n");
+        fclose (file);
         return;
     }
 
@@ -264,9 +264,9 @@ print_graph_to_file (sheet *worksheet,
 
             if (!is_duplicate)
             {
-                char *timestr = get_time_slot(worksheet, time);
-                fprintf(file, "    \"%s\" -- \"%s\" [label=\"%s\" fontsize=7];\n",
-                        source->name, target->name, timestr);
+                char *timestr = get_time_slot (worksheet, time);
+                fprintf (file, "    \"%s\" -- \"%s\" [label=\"%s\" fontsize=7];\n",
+                         source->name, target->name, timestr);
 
                 printed_edges[printed_count].node1 = source->name;
                 printed_edges[printed_count].node2 = target->name;
@@ -276,35 +276,35 @@ print_graph_to_file (sheet *worksheet,
         }
     }
 
-    fprintf(file, "}\n");
+    fprintf (file, "}\n");
 
-    fclose(file);
+    fclose (file);
 
-    free(printed_edges);
+    free (printed_edges);
 
-    printf("Graph has been written to %s\n", filename);
+    printf ("Graph has been written to %s\n", filename);
 
-    free_relation_graph(graph);
+    free_relation_graph (graph);
 }
 
 void
 print_digraph_to_file (sheet *worksheet,
                        const char *filename)
 {
-    FILE *file = fopen(filename, "w");
+    FILE *file = fopen (filename, "w");
     if (file == NULL)
     {
-        fprintf(stderr, "Error: cannot open file %s\n", filename);
+        fprintf (stderr, "Error: cannot open file %s\n", filename);
         return;
     }
 
-    fprintf(file, "digraph G { \n  size=\"6,4\";\n  ratio=fill;\n");
+    fprintf (file, "digraph G { \n  size=\"6,4\";\n  ratio=fill;\n");
 
-    relation_graph_t *graph = pairup_graph(worksheet);
+    relation_graph_t *graph = pairup_graph (worksheet);
     if (graph == NULL)
     {
-        fprintf(stderr, "Error: failed to generate graph\n");
-        fclose(file);
+        fprintf (stderr, "Error: failed to generate graph\n");
+        fclose (file);
         return;
     }
 
@@ -317,24 +317,24 @@ print_digraph_to_file (sheet *worksheet,
 
         if (relation->count == 1)
         {
-            fprintf(file, "  \"%s\";\n", source);
+            fprintf (file, "  \"%s\";\n", source);
             continue;
         }
 
         for (j = 1; j < relation->count; j++)
         {
             char *target = relation->candidates[j]->name;
-            fprintf(file, "  \"%s\" -> \"%s\";\n", source, target);
+            fprintf (file, "  \"%s\" -> \"%s\";\n", source, target);
         }
     }
 
-    fprintf(file, "}\n");
+    fprintf (file, "}\n");
 
-    fclose(file);
+    fclose (file);
 
-    printf("Graph has been written to %s\n", filename);
+    printf ("Graph has been written to %s\n", filename);
 
-    free_relation_graph(graph);
+    free_relation_graph (graph);
 }
 
 void
@@ -343,32 +343,32 @@ print_result (sheet *worksheet,
 {
     if (result->pairs == 0)
     {
-        printf("%s\n", NOPAIRS_SUGGESTION);
+        printf ("%s\n", NOPAIRS_SUGGESTION);
     }
     else
     {
-        printf("%s\n", GREETING);
+        printf ("%s\n", GREETING);
         for (int i = 0; i < result->pairs; i++)
         {
             pair_t *pair = result->pair_list[i];
-            char *time = get_time_slot(worksheet, pair->time);
-            printf("@%s -- @%s (%s)\n", pair->a->name, pair->b->name, time);
+            char *time = get_time_slot (worksheet, pair->time);
+            printf ("@%s -- @%s (%s)\n", pair->a->name, pair->b->name, time);
         }
     }
 
-    printf("\n");
-    printf("As for\n");
+    printf ("\n");
+    printf ("As for\n");
 
     if (result->singles != 0)
     {
         for (int i = 0; i < result->singles; i++)
         {
             member_t *member = result->single_list[i];
-            printf("@%s\n", member->name);
+            printf ("@%s\n", member->name);
         }
     }
 
-    printf("%s\n", ALTERNATIVES_FOR_NOT_MATCHED);
+    printf ("%s\n", ALTERNATIVES_FOR_NOT_MATCHED);
 }
 
 void
@@ -379,15 +379,15 @@ display_graph (void *context)
     for (int i = 0; i < graph->count; i++)
     {
         relation_t *row = graph->relations[i];
-        printf("Relation %d: [ %s ] --> ", i, row->candidates[0]->name);
+        printf ("Relation %d: [ %s ] --> ", i, row->candidates[0]->name);
         for (int j = 1; j < row->count; j++)
         {
             int time = row->matched_slot[j];
-            printf("%s(at %d) --> ", row->candidates[j]->name, time);
+            printf ("%s(at %d) --> ", row->candidates[j]->name, time);
         }
-        printf("\n");
+        printf ("\n");
     }
-    printf("\n");
+    printf ("\n");
 }
 
 void
@@ -412,33 +412,33 @@ display_summary (pair_result *result)
         RATIO_NREQ = (NREQ * 100) / REQ;
     }
 
-    printf("=======================  SUMMARY  =======================\n");
-    printf("Members: %zu\n", M);
-    printf("Successful pairs: %zu\n", P);
-    printf("Total requests: %zu\n", REQ);
+    printf ("=======================  SUMMARY  =======================\n");
+    printf ("Members: %zu\n", M);
+    printf ("Successful pairs: %zu\n", P);
+    printf ("Total requests: %zu\n", REQ);
 
     if (RATIO_SREQ == -1 || RATIO_NREQ == -1)
     {
-        printf("Successful requests: %zu\n", SREQ);
-        printf("Failed requests: %zu\n", NREQ);
+        printf ("Successful requests: %zu\n", SREQ);
+        printf ("Failed requests: %zu\n", NREQ);
     }
     else
     {
-        printf("Successful requests: %zu (%d%%)\n", SREQ, RATIO_SREQ);
-        printf("Failed requests: %zu (%d%%)\n", NREQ, RATIO_NREQ);
+        printf ("Successful requests: %zu (%d%%)\n", SREQ, RATIO_SREQ);
+        printf ("Failed requests: %zu (%d%%)\n", NREQ, RATIO_NREQ);
     }
 
-    printf("Pair list:\n");
+    printf ("Pair list:\n");
     for (int i = 0; i < result->pairs; i++)
     {
-        printf("%s -- %s\n", result->pair_list[i]->a->name, result->pair_list[i]->b->name);
+        printf ("%s -- %s\n", result->pair_list[i]->a->name, result->pair_list[i]->b->name);
     }
-    printf("Single list:\n");
+    printf ("Single list:\n");
     for (int i = 0; i < result->singles; i++)
     {
-        printf("%s\n", result->single_list[i]->name);
+        printf ("%s\n", result->single_list[i]->name);
     }
-    printf("=========================================================\n");
+    printf ("=========================================================\n");
 }
 
 int debug_level = DEBUG_NONE;
@@ -456,17 +456,17 @@ do_if_debug_level_is_greater (int level,
     }
 
     va_list args;
-    va_start(args, fmt);
-    va_end(args);
+    va_start (args, fmt);
+    va_end (args);
 
     if (fmt != NULL)
     {
-        vprintf(fmt, args);
-        printf("\n");
+        vprintf (fmt, args);
+        printf ("\n");
     }
 
     if (fptr != NULL)
     {
-        fptr(context);
+        fptr (context);
     }
 }
