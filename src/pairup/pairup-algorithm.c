@@ -452,7 +452,7 @@ preprocess_fixed_memblist (sheet *worksheet,
         member->earliest_slot = get_member_earliest_slot (worksheet, i);
 
         /* New */
-        member->ensure_score = get_member_ensure_score (worksheet, elist, i);
+        member->ensure_score = (elist) ? get_member_ensure_score (worksheet, elist, i) : 0;
 
         char *name = get_member_name (worksheet, i);
         size_t lastchar = strnlen (name,MAX_NAME_LEN);
