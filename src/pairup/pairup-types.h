@@ -47,6 +47,9 @@ typedef struct pair_result pair_result;  // Recommended
 typedef struct pair_result result_t;
 typedef struct pair_result result;
 
+typedef struct user_defined_ensure_list ensure_list;
+typedef struct user_defined_ensure_list udel;
+
 /**********************************  Data types  **************************************/
 
 /* Member's info and their willingness to practice on that day */
@@ -57,6 +60,8 @@ struct member
     size_t requests;           // Number of requested practices (0, 1 or 2)
     size_t availability;       // Number of slots available on that day
     slot   earliest_slot;      // Earliest time slot on the sheet
+    int    ensure_score;       // Ensure score (higher value -> higher priority,
+                               //               0 -> feature not used).
 };
 
 /* A successful pair will contain two members and a matched time slot */
@@ -101,6 +106,13 @@ struct pair_result
     pair *pair_list[MAX_MATCHES_LEN];
 };
 
+/* New feature under development */
+struct user_defined_ensure_list
+{
+    size_t ensure_list_size;
+    char ensure_list_content[MAX_MEMBERS_LEN][MAX_NAME_LEN];
+};
+
 /* For example: */
 // relation_graph today;           --> A graph named 'today'
 // today.relations[i].name;          --> Name of the i-th member in the graph
@@ -112,10 +124,10 @@ struct pairup_options
     bool generate_graph;
     char graph_output[1024];
     bool ensure;
-    char ensure_member[1024];
+    udel *ensure_member_list;
     bool priority;
     char priority_func[1024];
-    int debug_level;
+    int  debug_level;
 };
 
 /********************************  Number of practices  *********************************/

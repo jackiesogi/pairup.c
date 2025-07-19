@@ -78,7 +78,8 @@ const pairup_algorithm a[] = {                    // WHO WILL BE PAIRED UP FIRST
 /* Generate a random integer, only for internal use */
 static int
 preprocess_fixed_memblist (sheet *worksheet,
-                           member *mlist[]);
+                           member *mlist[],
+                           void *elist);
 
 static void
 preprocess_relation_graph (sheet *worksheet,
@@ -103,6 +104,10 @@ get_member_requests (sheet *worksheet,
 static char *
 get_member_name (sheet *worksheet,
                  int id);
+
+pair_result *
+pairup_ensure_list_priority (graph *graph,
+                             member *members[]);
 
 static int
 compare_availability_asc (const void *a,
@@ -145,6 +150,10 @@ compare_earliest_slot_desc (const void *a,
                             const void *b);
 
 static int
+compare_ensure_list (const void *a,
+                     const void *b);
+
+static int
 find_member_id (graph *today,
                 member *member);
 
@@ -181,14 +190,15 @@ pairup_with_priority (graph *today,
 /* This function will iterate through all the priority functions */
 /* and choose the target result that has maximized matches */
 pair_result *
-pairup (sheet *worksheet)
+pairup (sheet *worksheet,
+        struct pairup_options *x)
 {
     relation_graph *graph = new_relation_graph ();
     member *member_list[MAX_MEMBERS_LEN] = { NULL };
 
     /* Generate relations using the existing member_list */
     /* This will take in the empty member_list and fill it with the available members */
-    preprocess_fixed_memblist (worksheet, member_list);
+    preprocess_fixed_memblist (worksheet, member_list, (void *)x->ensure_member_list);
     preprocess_relation_graph (worksheet, graph, member_list);
 
     /* Initialize the best result and temporary result */
@@ -199,7 +209,20 @@ pairup (sheet *worksheet)
 
     for (int i = 0; a[i].algorithm != NULL; i++)
     {
-        pairup_internal algorithm = a[i].algorithm;
+        pairup_internal algorithm;
+
+        /* If --ensure={MEMBER} is used, then we do not care  */
+        /* about the pre-defined algorithm. Instead, we tried */ 
+        /* the `pairup_ensure_list_priority` several times to */
+        /* prioritize {MEMBER}.                               */
+        if (x->ensure == true)
+        {
+            algorithm = pairup_ensure_list_priority;
+        }
+        else
+        {
+            algorithm = a[i].algorithm;
+        }
 
         if (!algorithm) continue;
 
@@ -243,7 +266,10 @@ pairup (sheet *worksheet)
     }
 
     debug_action (DEBUG_INFO, (callback)print_worksheet, (void*)worksheet);
-    debug_printf (DEBUG_SUMMARY, "Best Algorithm: %s", a[id].name);
+    if (x->ensure == true)
+        debug_printf (DEBUG_SUMMARY, "Best Algorithm: None (Prioritized specific member(s))");
+    else
+        debug_printf (DEBUG_SUMMARY, "Best Algorithm: %s", a[id].name);
     debug_action (DEBUG_SUMMARY, (callback)display_summary, (void*)best);
     debug_printf (DEBUG_SUMMARY, "Relation Graph:");
     debug_action (DEBUG_SUMMARY, (callback)display_graph, (void*)graph);
@@ -261,7 +287,7 @@ pairup_graph (sheet *worksheet)
 
     /* Generate relations using the existing member_list */
     /* This will take in the empty member_list and fill it with the available members */
-    preprocess_fixed_memblist (worksheet, member_list);
+    preprocess_fixed_memblist (worksheet, member_list, NULL);
     preprocess_relation_graph (worksheet, graph, member_list);
 
     pairup_internal algorithm = a[0].algorithm;
@@ -359,9 +385,61 @@ get_member_name (sheet *worksheet,
     return worksheet->data[id][FILED_COL_NAME];
 }
 
+/* New feature under development */
+static int
+get_row_id_by_name (sheet *worksheet,
+                    const char *name)
+{
+    for (int i = FILED_ROW_START; i < MAX_MEMBERS_LEN; i++)
+    {
+        if (strcmp(name, worksheet->data[i][FILED_COL_NAME]) == 0)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+/* Calculate the ensure score    */
+static int
+get_member_ensure_score (sheet *worksheet,
+                         void *elist,
+                         int row_id)
+{
+    /* return the index in the ensure list and save to cache */
+    static bool initialized = false;
+    static int score_cache[MAX_MEMBERS_LEN];
+
+    if (initialized == false)
+    {
+        udel *ensure = (udel *)elist;
+        size_t highest = ensure->ensure_list_size + 1;
+        for (int i = 0; i < ensure->ensure_list_size; i++)
+        {
+            debug_printf (DEBUG_INFO,
+                          "[Ensure] %s will be prioritized, with score = %d.\n",
+                          ensure->ensure_list_content[i],
+                          highest
+            );
+
+            int id = get_row_id_by_name (worksheet, ensure->ensure_list_content[i]);
+
+            if (id >= 0) {
+                score_cache[id] = highest--;
+            } else {
+                fprintf(stderr, "[Ensure] Warning: '%s' not found in worksheet\n", ensure->ensure_list_content[i]);
+            }
+        }
+        // Optional: Add a loop to fill priority "1" to the rest of the row id
+        initialized = true;
+    }
+    return score_cache[row_id];
+}
+
 static int
 preprocess_fixed_memblist (sheet *worksheet,
-                           member *mlist[])
+                           member *mlist[],
+                           void *elist)
 {
     int i, count = 0;
 
@@ -372,6 +450,9 @@ preprocess_fixed_memblist (sheet *worksheet,
         member->requests = get_member_requests (worksheet, i);
         member->availability = get_member_availability (worksheet, i);
         member->earliest_slot = get_member_earliest_slot (worksheet, i);
+
+        /* New */
+        member->ensure_score = get_member_ensure_score (worksheet, elist, i);
 
         char *name = get_member_name (worksheet, i);
         size_t lastchar = strnlen (name,MAX_NAME_LEN);
@@ -491,6 +572,36 @@ compare_earliest_slot_desc (const void *a,
     return (rb->candidates[0]->earliest_slot -
             ra->candidates[0]->earliest_slot);
 }
+
+static int
+compare_ensure_list (const void *a,
+                     const void *b)
+{
+    const relation *ra = *(const relation **)a;
+    const relation *rb = *(const relation **)b;
+
+    /* Note that higher ensure score means higher priority, */
+    /* so we do a substraction in a reverse order.          */
+    int delta = rb->candidates[0]->ensure_score -
+                ra->candidates[0]->ensure_score;
+
+    if (delta == 0)
+    {
+        if (get_random_seed() % 2 == 0)
+        {
+            return -1;
+        }
+        else
+        {
+            return 1;
+        }
+    }
+    else
+    {
+        return delta;
+    }
+}
+
 
 /* TODO: Record the modified time and implement this function */
 // static int
@@ -763,6 +874,15 @@ pairup_with_priority (graph *today,
 
     return result;
 }
+
+/* Ensure List: ['Alice', 'Bob', 'Jackie'] */
+pair_result *
+pairup_ensure_list_priority (graph *graph,
+                             member *members[])
+{
+    return pairup_with_priority (graph, members, compare_ensure_list);
+}
+/* **************************************** */
 
 pair_result *
 pairup_least_availability_priority (graph *graph,

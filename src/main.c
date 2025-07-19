@@ -83,6 +83,19 @@ sigsegv_handler (int sig) {
     exit(EXIT_FAILURE);
 }
 
+void
+append_user_defined_ensure_list (struct user_defined_ensure_list *list,
+                                 const char *src)
+{
+    if (list->ensure_list_size < MAX_MEMBERS_LEN) {
+        strncpy(list->ensure_list_content[list->ensure_list_size],
+                src,
+                MAX_NAME_LEN - 1);
+        list->ensure_list_content[list->ensure_list_size][MAX_NAME_LEN - 1] = '\0';
+        list->ensure_list_size++;
+    }
+}
+
 int
 main (int argc, char *argv[])
 {
@@ -92,6 +105,7 @@ main (int argc, char *argv[])
     struct pairup_options x;
     pairup_options_init (&x);
     char graph_output[1024];
+    struct user_defined_ensure_list elist;
 
     /* Parse the command line arguments using while loop */
     int c;
@@ -120,8 +134,7 @@ main (int argc, char *argv[])
                 break;
             case 'e':
                 x.ensure = true;
-                printf ("Not implemented yet\n");
-                exit (EXIT_FAILURE);
+                append_user_defined_ensure_list (&elist, optarg);
                 break;
             case 'p':
                 x.priority = true;
@@ -164,12 +177,16 @@ main (int argc, char *argv[])
         print_worksheet (&worksheet);
         return 0;
     }
+    if (x.ensure == true)
+    {
+        x.ensure_member_list = &elist;
+    }
 
     /* Randomize the worksheet rows to avoid bias */
     shuffle_worksheet (&worksheet, time(NULL));
 
     /* Trigger the top-level pairup function */
-    pair_result_t *result = pairup (&worksheet);
+    pair_result_t *result = pairup (&worksheet, &x);
 
     /* Print the result */
     print_result (&worksheet, result);
