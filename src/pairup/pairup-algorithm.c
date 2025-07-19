@@ -390,7 +390,7 @@ static int
 get_row_id_by_name (sheet *worksheet,
                     const char *name)
 {
-    for (int i = FILED_ROW_START; i < MAX_MEMBERS_LEN; i++)
+    for (int i = FILED_ROW_START; i < worksheet->rows; i++)
     {
         if (strcmp(name, worksheet->data[i][FILED_COL_NAME]) == 0)
         {
