@@ -51,6 +51,7 @@ void
 display_graph (void *graph);
 
 /* Debug levels */
+// None -> Error -> Warning -> Summary -> Info -> All
 #define DEBUG_NONE     0
 #define DEBUG_ERROR    1
 #define DEBUG_WARNING  2

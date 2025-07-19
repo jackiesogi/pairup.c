@@ -71,11 +71,11 @@ struct pair
 /* Technically, it's a row in adjacency list representation (See next struct) */
 struct relation
 {
-    size_t count;                                 // Number of candidates for this member
+    size_t count;                                // Number of candidates for this member
     member *candidates[MAX_MATCHES_LEN];         // Candidates for this member
     slot matched_slot[MAX_MATCHES_LEN];          // Matched time slot for this member
 
-    size_t availability;                          // Number of slots available on that day
+    size_t availability;                         // Number of slots available on that day
     slot available_slot[MAX_MATCHES_LEN];        // Available time slot for this member
 };
 
@@ -84,8 +84,8 @@ struct relation
 /* Adjacency list will be more convinient when using DFS or BFS to walk through the graph */
 struct relation_graph
 {
-    size_t count;                                  // Number of relations
-    relation *relations[MAX_MATCHES_LEN];  // Relations
+    size_t count;                                // Number of relations
+    relation *relations[MAX_MATCHES_LEN];        // Relations
 };
 
 /* A pair result contains the successful pairs and the remaining singles */
