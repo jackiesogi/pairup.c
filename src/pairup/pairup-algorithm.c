@@ -447,7 +447,7 @@ get_member_ensure_score (sheet *worksheet,
         for (int i = 0; i < ensure->ensure_list_size; i++)
         {
             debug_printf (DEBUG_INFO,
-                          "[Ensure] %s will be prioritized, with score = %d.\n",
+                          "[INFO   ] %s will be prioritized, with score = %d.",
                           ensure->ensure_list_content[i],
                           highest
             );
