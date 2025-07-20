@@ -22,6 +22,7 @@ struct pairup_algorithm
 {
     const char *name;
     const pairup_internal algorithm;
+    /*int (*compare_fn)(const void *, const void *);*/
 };
 
 /* Various pre-defined priority */
@@ -30,7 +31,7 @@ struct pairup_algorithm
 const pairup_algorithm a[] = {                    // WHO WILL BE PAIRED UP FIRST?
     {
         "LEAST_AVAILABILITY_PRIORITY",            // Members with least time slots filled in.
-         pairup_least_availability_priority
+         pairup_least_availability_priority,
     },
     {
         "MOST_AVAILABILITY_PRIORITY",             // Members with most time slots filled in.
@@ -236,15 +237,15 @@ pairup (sheet *worksheet,
             algorithm = get_algorithm_by_name (x->priority_func);
             if (!algorithm)
             {
-                debug_printf (DEBUG_ERROR,
-                              "[ERROR  ] No pairup algorithm called '%s', fallback to default.",
+                debug_printf (DEBUG_WARNING,
+                              "[WARNING] No pairup algorithm called '%s', fallback to default.\n",
                               x->priority_func);
                 x->priority = false;
             }
             else
             {
                 debug_printf (DEBUG_INFO,
-                              "[INFO   ] Set '%s' as the pairup algorithm.",
+                              "[INFO   ] Set '%s' as the pairup algorithm.\n",
                               x->priority_func);
             }
         }
@@ -258,6 +259,13 @@ pairup (sheet *worksheet,
         /* Get the pairing result of current algorithm */
         temp = algorithm (graph, member_list);
         temp->algorithm_applied = &a[i];
+
+        debug_printf (DEBUG_INFO, "[INFO   ] Applying the priority '%s' ...\n",
+                      temp->algorithm_applied->name);
+        debug_action (DEBUG_INFO, (callback)display_graph, (void*)graph);
+
+        debug_printf (DEBUG_INFO, "[SUMMARY] Generating result summary ...\n");
+        debug_action (DEBUG_INFO, (callback)display_summary, (void*)temp);
 
         bool should_update_best = false;
 
@@ -276,6 +284,10 @@ pairup (sheet *worksheet,
 
         if (should_update_best)
         {
+            debug_printf (DEBUG_INFO, "\
+[INFO   ] %s has better successful request rate (%3d\%) than previous one, updating ...\n",
+temp->algorithm_applied->name,
+(temp->pairs * 200 / temp->total_requests));
             if (best)
             {
                 free_pair_result (best);
@@ -285,6 +297,11 @@ pairup (sheet *worksheet,
         }
         else
         {
+            debug_printf (DEBUG_INFO, "\
+[INFO   ] %s does not have a better successful request rate (%3d\%), skipping ...\n",
+temp->algorithm_applied->name,
+(temp->pairs * 200 / temp->total_requests));
+
             free_pair_result (temp);
         }
 
@@ -297,11 +314,11 @@ pairup (sheet *worksheet,
 
     debug_action (DEBUG_INFO, (callback)print_worksheet, (void*)worksheet);
     if (x->ensure == true || x->priority == true)
-        debug_printf (DEBUG_SUMMARY, "[SUMMARY] Best Algorithm: None (Prioritized specific member(s))");
+        debug_printf (DEBUG_SUMMARY, "[SUMMARY] Best Algorithm: None (Prioritized specific member(s))\n");
     else
-        debug_printf (DEBUG_SUMMARY, "[SUMMARY] Best Algorithm: %s", a[id].name);
+        debug_printf (DEBUG_SUMMARY, "[SUMMARY] Best Algorithm: %s\n", a[id].name);
     debug_action (DEBUG_SUMMARY, (callback)display_summary, (void*)best);
-    debug_printf (DEBUG_SUMMARY, "[SUMMARY] Relation Graph:");
+    debug_printf (DEBUG_SUMMARY, "[SUMMARY] Relation Graph:\n");
     debug_action (DEBUG_SUMMARY, (callback)display_graph, (void*)graph);
 
     free_relation_graph (graph);
@@ -447,7 +464,7 @@ get_member_ensure_score (sheet *worksheet,
         for (int i = 0; i < ensure->ensure_list_size; i++)
         {
             debug_printf (DEBUG_INFO,
-                          "[INFO   ] %s will be prioritized, with score = %d.",
+                          "[INFO   ] %s will be prioritized, with score = %d.\n",
                           ensure->ensure_list_content[i],
                           highest
             );
@@ -457,7 +474,7 @@ get_member_ensure_score (sheet *worksheet,
             if (id >= 0) {
                 score_cache[id] = highest--;
             } else {
-                fprintf(stderr, "[Ensure] Warning: '%s' not found in worksheet\n", ensure->ensure_list_content[i]);
+                fprintf(stderr, "[ERROR  ] Warning: '%s' not found in worksheet\n", ensure->ensure_list_content[i]);
             }
         }
         // Optional: Add a loop to fill priority "1" to the rest of the row id
@@ -473,9 +490,17 @@ preprocess_fixed_memblist (sheet *worksheet,
 {
     int i, count = 0;
 
+    debug_printf(DEBUG_INFO, "[INFO   ] Generating fixed member list ...\n");
+
     for (i = FILED_ROW_START; i < worksheet->rows - 1; i++)
     {
         member *member = new_member ();
+
+        char *name = get_member_name (worksheet, i);
+        size_t lastchar = strnlen (name,MAX_NAME_LEN);
+        strncpy (member->name, name, lastchar);
+        member->name[lastchar] = '\0';
+
         member->id = i;
         member->requests = get_member_requests (worksheet, i);
         member->availability = get_member_availability (worksheet, i);
@@ -484,15 +509,22 @@ preprocess_fixed_memblist (sheet *worksheet,
         /* New */
         member->ensure_score = (elist) ? get_member_ensure_score (worksheet, elist, i) : 0;
 
-        char *name = get_member_name (worksheet, i);
-        size_t lastchar = strnlen (name,MAX_NAME_LEN);
-        strncpy (member->name, name, lastchar);
-        member->name[lastchar] = '\0';
-
         mlist[i] = member;
         count++;
+
+        debug_printf(DEBUG_ALL, "\
+[ALL    ] On row %2d, found member '%s' with availability=%d, request=%d, \
+earliest_slot=%d and ensure_score=%d.\n",
+member->id,
+member->name,
+member->availability,
+member->requests,
+member->earliest_slot,
+member->ensure_score);
+
     }
 
+    debug_printf(DEBUG_INFO, "[INFO   ] Finshed generating fixed member list.\n");
     return count;
 }
 
@@ -893,14 +925,14 @@ pairup_with_priority (graph *today,
     /* Sort the members based on the provided comparison function */
     qsort (today->relations, today->count, sizeof(relation *), compare_fn);
 
-    debug_printf (DEBUG_INFO, "[INFO   ] Sorted graph based on the priority.\n");
-    debug_action (DEBUG_INFO, (callback)display_graph, (void*)today);
+    /*debug_printf (DEBUG_INFO, "[INFO   ] Sorted graph based on the priority.\n");*/
+    /*debug_action (DEBUG_INFO, (callback)display_graph, (void*)today);*/
 
     /* Pair up the members */
     pairup_bfs (today, members, result);
 
-    debug_printf (DEBUG_INFO, "[SUMMARY] Pair result summary:\n");
-    debug_action (DEBUG_INFO, (callback)display_summary, (void*)result);
+    /*debug_printf (DEBUG_INFO, "[SUMMARY] Pair result summary:\n");*/
+    /*debug_action (DEBUG_INFO, (callback)display_summary, (void*)result);*/
 
     return result;
 }
@@ -912,7 +944,6 @@ pairup_ensure_list_priority (graph *graph,
 {
     return pairup_with_priority (graph, members, compare_ensure_list);
 }
-/* **************************************** */
 
 pair_result *
 pairup_least_availability_priority (graph *graph,

@@ -2,6 +2,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -97,6 +98,48 @@ append_user_defined_ensure_list (struct user_defined_ensure_list *list,
 }
 
 int
+parse_debug_level (const char *str)
+{
+    if (!str)
+    {
+        return -1;
+    }
+
+    if (isdigit (str[0]))
+    {
+        return atoi(&str[0]);
+    }
+    else if (strncmp(str, "NONE", 8) == 0)
+    {
+        return 0;
+    }
+    else if (strncmp(str, "ERROR", 8) == 0)
+    {
+        return 1;
+    }
+    else if (strncmp(str, "WARNING", 8) == 0)
+    {
+        return 2;
+    }
+    else if (strncmp(str, "SUMMARY", 8) == 0)
+    {
+        return 3;
+    }
+    else if (strncmp(str, "INFO", 8) == 0)
+    {
+        return 4;
+    }
+    else if (strncmp(str, "ALL", 8) == 0)
+    {
+        return 5;
+    }
+    else
+    {
+        return -1;
+    }
+}
+
+int
 main (int argc, char *argv[])
 {
     signal (SIGSEGV, sigsegv_handler);
@@ -114,13 +157,13 @@ main (int argc, char *argv[])
         switch (c)
         {
             case 'd':
-                x.debug_level = atoi (optarg);
-                debug_level = atoi (optarg);
+                debug_level = parse_debug_level (optarg);
+                x.debug_level = debug_level;
                 break;
             case 'g':
                 if (!has_installed_graphviz())
                 {
-                    fprintf (stderr, "Please install package `graphviz` first\n");
+                    debug_printf (DEBUG_ERROR, "[ERROR  ] Please install package `graphviz` first\n");
                     exit (EXIT_FAILURE);
                 }
                 x.generate_graph = true;
@@ -182,9 +225,13 @@ main (int argc, char *argv[])
     }
 
     /* Randomize the worksheet rows to avoid bias */
+    debug_printf(DEBUG_INFO, "\
+[INFO   ] Shuffling each row inside the input worksheet to avoid bias result ...\n");
     shuffle_worksheet (&worksheet, time(NULL));
+    debug_printf(DEBUG_INFO, "[INFO   ] Finished shuffling.\n");
 
     /* Trigger the top-level pairup function */
+    debug_printf(DEBUG_INFO, "[INFO   ] Starting the pairing up process ...\n");
     pair_result_t *result = pairup (&worksheet, &x);
 
     /* Print the result */
@@ -192,5 +239,6 @@ main (int argc, char *argv[])
 
     free_pair_result (result);
 
+    debug_printf(DEBUG_INFO, "[INFO   ] Done!\n");
     return 0;
 }
