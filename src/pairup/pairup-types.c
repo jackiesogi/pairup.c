@@ -203,6 +203,7 @@ new_pair_result (int pairs,
     result->member = members;
     result->singles = singles;
     result->pairs = pairs;
+    result->algorithm_applied = NULL;
 
     /* Currently the member graph, single_list, pair_list are not dynamically allocated */
     return result;

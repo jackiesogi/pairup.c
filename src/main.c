@@ -138,8 +138,7 @@ main (int argc, char *argv[])
                 break;
             case 'p':
                 x.priority = true;
-                printf ("Not implemented yet\n");
-                exit (EXIT_FAILURE);
+                strncpy(x.priority_func, optarg, 1024);
                 break;
             case 'v':
                 printf ("%s\n", PROGRAM_VERSION);

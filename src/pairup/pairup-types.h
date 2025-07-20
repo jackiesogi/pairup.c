@@ -104,6 +104,7 @@ struct pair_result
     struct member *member_list[MAX_MATCHES_LEN];
     struct member *single_list[MAX_MATCHES_LEN];
     pair *pair_list[MAX_MATCHES_LEN];
+    struct pairup_algorithm *algorithm_applied;
 };
 
 /* New feature under development */

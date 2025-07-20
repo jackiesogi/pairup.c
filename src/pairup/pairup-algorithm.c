@@ -87,7 +87,7 @@ preprocess_relation_graph (sheet *worksheet,
                            member *mlist[]);
 
 static int
-get_random_seed (void);
+get_random_int (void);
 
 static int
 get_member_availability (sheet *worksheet,
@@ -104,6 +104,20 @@ get_member_requests (sheet *worksheet,
 static char *
 get_member_name (sheet *worksheet,
                  int id);
+
+static
+pairup_internal
+get_algorithm_by_name (const char *target)
+{
+    for (int i = 0; a[i].algorithm != NULL; i++)
+    {
+        if (strncmp(a[i].name, target, 1024) == 0)
+        {
+            return a[i].algorithm;
+        }
+    }
+    return NULL;
+}
 
 pair_result *
 pairup_ensure_list_priority (graph *graph,
@@ -202,9 +216,7 @@ pairup (sheet *worksheet,
     preprocess_relation_graph (worksheet, graph, member_list);
 
     /* Initialize the best result and temporary result */
-    result *best;
-    result *temp;
-    best = temp = NULL;
+    result *best = NULL, *temp = NULL;
     int id = -1;
 
     for (int i = 0; a[i].algorithm != NULL; i++)
@@ -219,6 +231,23 @@ pairup (sheet *worksheet,
         {
             algorithm = pairup_ensure_list_priority;
         }
+        else if (x->priority == true)
+        {
+            algorithm = get_algorithm_by_name (x->priority_func);
+            if (!algorithm)
+            {
+                debug_printf (DEBUG_ERROR,
+                              "[ERROR  ] No pairup algorithm called '%s', fallback to default.",
+                              x->priority_func);
+                x->priority = false;
+            }
+            else
+            {
+                debug_printf (DEBUG_INFO,
+                              "[INFO   ] Set '%s' as the pairup algorithm.",
+                              x->priority_func);
+            }
+        }
         else
         {
             algorithm = a[i].algorithm;
@@ -228,6 +257,7 @@ pairup (sheet *worksheet,
 
         /* Get the pairing result of current algorithm */
         temp = algorithm (graph, member_list);
+        temp->algorithm_applied = &a[i];
 
         bool should_update_best = false;
 
@@ -237,7 +267,7 @@ pairup (sheet *worksheet,
         }
         else if (temp->pairs == best->pairs)
         {
-            int rand = get_random_seed ();
+            int rand = get_random_int ();
             if (rand % 2 == 0)
             {
                 should_update_best = true;
@@ -260,18 +290,18 @@ pairup (sheet *worksheet,
 
         if (best->total_requests == (best->pairs << 1))
         {
-            debug_printf (DEBUG_INFO, "Found the maximum matches, stop searching!\n");
+            debug_printf (DEBUG_INFO, "[INFO   ] Found the maximum matches, stop searching!\n");
             break;
         }
     }
 
     debug_action (DEBUG_INFO, (callback)print_worksheet, (void*)worksheet);
-    if (x->ensure == true)
-        debug_printf (DEBUG_SUMMARY, "Best Algorithm: None (Prioritized specific member(s))");
+    if (x->ensure == true || x->priority == true)
+        debug_printf (DEBUG_SUMMARY, "[SUMMARY] Best Algorithm: None (Prioritized specific member(s))");
     else
-        debug_printf (DEBUG_SUMMARY, "Best Algorithm: %s", a[id].name);
+        debug_printf (DEBUG_SUMMARY, "[SUMMARY] Best Algorithm: %s", a[id].name);
     debug_action (DEBUG_SUMMARY, (callback)display_summary, (void*)best);
-    debug_printf (DEBUG_SUMMARY, "Relation Graph:");
+    debug_printf (DEBUG_SUMMARY, "[SUMMARY] Relation Graph:");
     debug_action (DEBUG_SUMMARY, (callback)display_graph, (void*)graph);
 
     free_relation_graph (graph);
@@ -304,7 +334,7 @@ pairup_graph (sheet *worksheet)
 
 /* Generate a random integer, ensuring srand is initialized only once */
 static int
-get_random_seed (void)
+get_random_int (void)
 {
     static int initialized = 0; // Static variable to track initialization
 
@@ -587,7 +617,7 @@ compare_ensure_list (const void *a,
 
     if (delta == 0)
     {
-        if (get_random_seed() % 2 == 0)
+        if (get_random_int () % 2 == 0)
         {
             return -1;
         }
@@ -863,13 +893,13 @@ pairup_with_priority (graph *today,
     /* Sort the members based on the provided comparison function */
     qsort (today->relations, today->count, sizeof(relation *), compare_fn);
 
-    debug_printf (DEBUG_INFO, "Sorted graph based on the priority:\n");
+    debug_printf (DEBUG_INFO, "[INFO   ] Sorted graph based on the priority.\n");
     debug_action (DEBUG_INFO, (callback)display_graph, (void*)today);
 
     /* Pair up the members */
     pairup_bfs (today, members, result);
 
-    debug_printf (DEBUG_INFO, "Pair result summary:\n");
+    debug_printf (DEBUG_INFO, "[SUMMARY] Pair result summary:\n");
     debug_action (DEBUG_INFO, (callback)display_summary, (void*)result);
 
     return result;
