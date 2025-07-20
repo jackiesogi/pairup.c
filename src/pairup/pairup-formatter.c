@@ -380,7 +380,7 @@ display_graph (void *context)
     {
         relation_t *row = graph->relations[i];
         /*printf ("Relation %d: [ %s ] --> ", i, row->candidates[0]->name);*/
-        debug_printf (DEBUG_SUMMARY, "[SUMMARY]   Relation %d: [ %s ] --> ", i, row->candidates[0]->name);
+        debug_printf (DEBUG_SUMMARY, "[ SUMMARY ]   Relation %d: [ %s ] --> ", i, row->candidates[0]->name);
         for (int j = 1; j < row->count; j++)
         {
             int time = row->matched_slot[j];
@@ -413,30 +413,30 @@ display_summary (pair_result *result)
         RATIO_NREQ = (NREQ * 100) / REQ;
     }
 
-    debug_printf (DEBUG_SUMMARY, "[SUMMARY] Members: %zu\n", M);
-    debug_printf (DEBUG_SUMMARY, "[SUMMARY] Successful pairs: %zu\n", P);
-    debug_printf (DEBUG_SUMMARY, "[SUMMARY] Total requests: %zu\n", REQ);
+    debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Members: %zu\n", M);
+    debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Successful pairs: %zu\n", P);
+    debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Total requests: %zu\n", REQ);
 
     if (RATIO_SREQ == -1 || RATIO_NREQ == -1)
     {
-        debug_printf (DEBUG_SUMMARY, "[SUMMARY] Successful requests: %zu\n", SREQ);
-        debug_printf (DEBUG_SUMMARY, "[SUMMARY] Failed requests: %zu\n", NREQ);
+        debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Successful requests: %zu\n", SREQ);
+        debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Failed requests: %zu\n", NREQ);
     }
     else
     {
-        debug_printf (DEBUG_SUMMARY, "[SUMMARY] Successful requests: %zu (%d%%)\n", SREQ, RATIO_SREQ);
-        debug_printf (DEBUG_SUMMARY, "[SUMMARY] Failed requests: %zu (%d%%)\n", NREQ, RATIO_NREQ);
+        debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Successful requests: %zu (%d%%)\n", SREQ, RATIO_SREQ);
+        debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Failed requests: %zu (%d%%)\n", NREQ, RATIO_NREQ);
     }
 
-    debug_printf (DEBUG_SUMMARY, "[SUMMARY] Pair list:\n");
+    debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Pair list:\n");
     for (int i = 0; i < result->pairs; i++)
     {
-        debug_printf (DEBUG_SUMMARY, "[SUMMARY]   %s -- %s\n", result->pair_list[i]->a->name, result->pair_list[i]->b->name);
+        debug_printf (DEBUG_SUMMARY, "[ SUMMARY ]   %s -- %s\n", result->pair_list[i]->a->name, result->pair_list[i]->b->name);
     }
-    debug_printf (DEBUG_SUMMARY, "[SUMMARY] Single list:\n");
+    debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Single list:\n");
     for (int i = 0; i < result->singles; i++)
     {
-        debug_printf (DEBUG_SUMMARY, "[SUMMARY]   %s\n", result->single_list[i]->name);
+        debug_printf (DEBUG_SUMMARY, "[ SUMMARY ]   %s\n", result->single_list[i]->name);
     }
 }
 
@@ -461,7 +461,6 @@ do_if_debug_level_is_greater (int level,
     if (fmt != NULL)
     {
         vprintf (fmt, args);
-        /*printf ("\n");*/
     }
 
     if (fptr != NULL)

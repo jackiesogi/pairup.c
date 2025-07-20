@@ -163,7 +163,7 @@ main (int argc, char *argv[])
             case 'g':
                 if (!has_installed_graphviz())
                 {
-                    debug_printf (DEBUG_ERROR, "[ERROR  ] Please install package `graphviz` first\n");
+                    debug_printf (DEBUG_ERROR, "[ ERROR   ] Please install package `graphviz` first\n");
                     exit (EXIT_FAILURE);
                 }
                 x.generate_graph = true;
@@ -226,12 +226,12 @@ main (int argc, char *argv[])
 
     /* Randomize the worksheet rows to avoid bias */
     debug_printf(DEBUG_INFO, "\
-[INFO   ] Shuffling each row inside the input worksheet to avoid bias result ...\n");
+[ INFO    ] Shuffling each row inside the input worksheet to avoid bias result ...\n");
     shuffle_worksheet (&worksheet, time(NULL));
-    debug_printf(DEBUG_INFO, "[INFO   ] Finished shuffling.\n");
+    debug_printf(DEBUG_INFO, "[ INFO    ] Finished shuffling.\n");
 
     /* Trigger the top-level pairup function */
-    debug_printf(DEBUG_INFO, "[INFO   ] Starting the pairing up process ...\n");
+    debug_printf(DEBUG_INFO, "[ INFO    ] Starting the pairing up process ...\n");
     pair_result_t *result = pairup (&worksheet, &x);
 
     /* Print the result */
@@ -239,6 +239,6 @@ main (int argc, char *argv[])
 
     free_pair_result (result);
 
-    debug_printf(DEBUG_INFO, "[INFO   ] Done!\n");
+    debug_printf(DEBUG_INFO, "[ INFO    ] Done!\n");
     return 0;
 }

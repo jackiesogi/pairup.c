@@ -238,14 +238,14 @@ pairup (sheet *worksheet,
             if (!algorithm)
             {
                 debug_printf (DEBUG_WARNING,
-                              "[WARNING] No pairup algorithm called '%s', fallback to default.\n",
+                              "[ WARNING ] No pairup algorithm called '%s', fallback to default.\n",
                               x->priority_func);
                 x->priority = false;
             }
             else
             {
                 debug_printf (DEBUG_INFO,
-                              "[INFO   ] Set '%s' as the pairup algorithm.\n",
+                              "[ INFO    ] Set '%s' as the pairup algorithm.\n",
                               x->priority_func);
             }
         }
@@ -260,11 +260,11 @@ pairup (sheet *worksheet,
         temp = algorithm (graph, member_list);
         temp->algorithm_applied = &a[i];
 
-        debug_printf (DEBUG_INFO, "[INFO   ] Applying the priority '%s' ...\n",
+        debug_printf (DEBUG_INFO, "[ INFO    ] Applying the priority '%s' ...\n",
                       temp->algorithm_applied->name);
         debug_action (DEBUG_INFO, (callback)display_graph, (void*)graph);
 
-        debug_printf (DEBUG_INFO, "[SUMMARY] Generating result summary ...\n");
+        debug_printf (DEBUG_INFO, "[ SUMMARY ] Generating result summary ...\n");
         debug_action (DEBUG_INFO, (callback)display_summary, (void*)temp);
 
         bool should_update_best = false;
@@ -285,7 +285,7 @@ pairup (sheet *worksheet,
         if (should_update_best)
         {
             debug_printf (DEBUG_INFO, "\
-[INFO   ] %s has better successful request rate (%3d\%) than previous one, updating ...\n",
+[ INFO    ] %s has better successful request rate (%3d\%) than previous one, updating ...\n",
 temp->algorithm_applied->name,
 (temp->pairs * 200 / temp->total_requests));
             if (best)
@@ -298,7 +298,7 @@ temp->algorithm_applied->name,
         else
         {
             debug_printf (DEBUG_INFO, "\
-[INFO   ] %s does not have a better successful request rate (%3d\%), skipping ...\n",
+[ INFO    ] %s does not have a better successful request rate (%3d\%), skipping ...\n",
 temp->algorithm_applied->name,
 (temp->pairs * 200 / temp->total_requests));
 
@@ -307,18 +307,18 @@ temp->algorithm_applied->name,
 
         if (best->total_requests == (best->pairs << 1))
         {
-            debug_printf (DEBUG_INFO, "[INFO   ] Found the maximum matches, stop searching!\n");
+            debug_printf (DEBUG_INFO, "[ INFO    ] Found the maximum matches, stop searching!\n");
             break;
         }
     }
 
     debug_action (DEBUG_INFO, (callback)print_worksheet, (void*)worksheet);
     if (x->ensure == true || x->priority == true)
-        debug_printf (DEBUG_SUMMARY, "[SUMMARY] Best Algorithm: None (Prioritized specific member(s))\n");
+        debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Best Algorithm: None (Prioritized specific member(s))\n");
     else
-        debug_printf (DEBUG_SUMMARY, "[SUMMARY] Best Algorithm: %s\n", a[id].name);
+        debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Best Algorithm: %s\n", a[id].name);
     debug_action (DEBUG_SUMMARY, (callback)display_summary, (void*)best);
-    debug_printf (DEBUG_SUMMARY, "[SUMMARY] Relation Graph:\n");
+    debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Relation Graph:\n");
     debug_action (DEBUG_SUMMARY, (callback)display_graph, (void*)graph);
 
     free_relation_graph (graph);
@@ -464,7 +464,7 @@ get_member_ensure_score (sheet *worksheet,
         for (int i = 0; i < ensure->ensure_list_size; i++)
         {
             debug_printf (DEBUG_INFO,
-                          "[INFO   ] %s will be prioritized, with score = %d.\n",
+                          "[ INFO    ] %s will be prioritized, with score = %d.\n",
                           ensure->ensure_list_content[i],
                           highest
             );
@@ -474,7 +474,7 @@ get_member_ensure_score (sheet *worksheet,
             if (id >= 0) {
                 score_cache[id] = highest--;
             } else {
-                fprintf(stderr, "[ERROR  ] Warning: '%s' not found in worksheet\n", ensure->ensure_list_content[i]);
+                debug_printf(DEBUG_WARNING, "[ WARNING ] Warning: '%s' not found in worksheet\n", ensure->ensure_list_content[i]);
             }
         }
         // Optional: Add a loop to fill priority "1" to the rest of the row id
@@ -490,7 +490,7 @@ preprocess_fixed_memblist (sheet *worksheet,
 {
     int i, count = 0;
 
-    debug_printf(DEBUG_INFO, "[INFO   ] Generating fixed member list ...\n");
+    debug_printf(DEBUG_INFO, "[ INFO    ] Generating fixed member list ...\n");
 
     for (i = FILED_ROW_START; i < worksheet->rows - 1; i++)
     {
@@ -513,7 +513,7 @@ preprocess_fixed_memblist (sheet *worksheet,
         count++;
 
         debug_printf(DEBUG_ALL, "\
-[ALL    ] On row %2d, found member '%s' with availability=%d, request=%d, \
+[ ALL     ] On row %2d, found member '%s' with availability=%d, request=%d, \
 earliest_slot=%d and ensure_score=%d.\n",
 member->id,
 member->name,
@@ -524,7 +524,7 @@ member->ensure_score);
 
     }
 
-    debug_printf(DEBUG_INFO, "[INFO   ] Finshed generating fixed member list.\n");
+    debug_printf(DEBUG_INFO, "[ INFO    ] Finshed generating fixed member list.\n");
     return count;
 }
 
