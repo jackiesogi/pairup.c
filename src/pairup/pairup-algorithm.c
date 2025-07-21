@@ -220,9 +220,20 @@ pairup (sheet *worksheet,
     result *best = NULL, *temp = NULL;
     int id = -1;
 
+    int current_success_rate = 0;
+    int temp_success_rate = 0;
     for (int i = 0; a[i].algorithm != NULL; i++)
     {
         pairup_internal algorithm;
+
+        int total_requests = (temp && temp->total_requests > 0) ? temp->total_requests : 1;
+        temp_success_rate = (temp) ? (temp->pairs * 200 / total_requests) : temp_success_rate;
+        if (temp_success_rate > current_success_rate)
+            current_success_rate = temp_success_rate;
+
+        debug_printf (DEBUG_INFO, "\
+[ INFO    ] Current successful request rate is at %d\%, trying next one ...\n",
+current_success_rate);
 
         /* If --ensure={MEMBER} is used, then we do not care  */
         /* about the pre-defined algorithm. Instead, we tried */ 
@@ -311,6 +322,8 @@ temp->algorithm_applied->name,
             break;
         }
     }
+    debug_printf (DEBUG_INFO, "[ INFO    ] No more method to try.\n");
+    debug_printf (DEBUG_INFO, "[ INFO    ] Found best method: %s.\n", best->algorithm_applied->name);
 
     debug_action (DEBUG_INFO, (callback)print_worksheet, (void*)worksheet);
     if (x->ensure == true || x->priority == true)
