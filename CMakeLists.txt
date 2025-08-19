@@ -13,6 +13,7 @@ set(BUILD_DIR ${CMAKE_BINARY_DIR}/build)
 include_directories(${LIB_DIR} ${SRC_DIR})
 
 add_library(librwcsv STATIC ${LIB_DIR}/rw-csv.c)
+add_library(libgetopt STATIC ${LIB_DIR}/getopt.c)
 
 set(PAIRUP_SOURCES
     ${SRC_DIR}/pairup/pairup-algorithm.c
@@ -56,20 +57,27 @@ configure_file(
 )
 
 add_executable(main ${MAIN_SOURCE} ${VERSION_FILE})
-target_link_libraries(main librwcsv pairup)
+target_link_libraries(main librwcsv libgetopt pairup)
 target_include_directories(main PUBLIC ${SRC_DIR})
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+if(WIN32)
+    set(PAIRUP_EXE pairup.exe)
+else()
+    set(PAIRUP_EXE pairup)
+endif()
+
 add_custom_command(
     TARGET main POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:main> ${CMAKE_SOURCE_DIR}/pairup
-    COMMENT "Copying executable to project root as 'pairup'"
+    COMMAND ${CMAKE_COMMAND} -E copy
+            $<TARGET_FILE:main>
+            ${CMAKE_SOURCE_DIR}/${PAIRUP_EXE}
+    COMMENT "Copying executable to project root as ${PAIRUP_EXE}"
 )
 
 add_custom_target(clean-all
     COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}
-    COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/pairup
+    COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_SOURCE_DIR}/${PAIRUP_EXE}
     COMMENT "Cleaning build directory and root-level executable"
 )
-

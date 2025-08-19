@@ -466,6 +466,11 @@ get_member_ensure_score (sheet *worksheet,
                          void *elist,
                          int row_id)
 {
+/* Windows has unkown hang issue on calculating ensure score*/
+#if (defined(_WIN32) || defined(_WIN64))
+    return 0;
+#endif
+
     /* return the index in the ensure list and save to cache */
     static bool initialized = false;
     static int score_cache[MAX_MEMBERS_LEN];
@@ -540,6 +545,101 @@ member->ensure_score);
     debug_printf(DEBUG_INFO, "[ INFO    ] Finshed generating fixed member list.\n");
     return count;
 }
+
+// static int
+// preprocess_fixed_memblist(sheet *worksheet,
+//                           member *mlist[],
+//                           void *elist)
+// {
+//     int i, count = 0;
+
+//     debug_printf(DEBUG_INFO, "[ INFO    ] Generating fixed member list ...\n");
+
+//     printf("[DEBUG   ] worksheet->rows=%d, worksheet->cols=%d\n", worksheet->rows, worksheet->cols);
+
+//     for (i = FILED_ROW_START; i < worksheet->rows - 1; i++)
+//     {
+//         printf("[DEBUG   ] Processing row %d...\n", i);
+
+//         // 建立 member
+//         member *member = new_member();
+//         if (!member)
+//         {
+//             fprintf(stderr, "[ERROR   ] new_member() failed at row %d\n", i);
+//             continue;
+//         }
+
+//         // 取得姓名
+//         char *name = get_member_name(worksheet, i);
+//         if (!name)
+//         {
+//             fprintf(stderr, "[ERROR   ] get_member_name returned NULL for row %d\n", i);
+//             free(member);
+//             continue;
+//         }
+
+//         size_t lastchar = strnlen(name, MAX_NAME_LEN);
+//         size_t copy_len = (lastchar < MAX_NAME_LEN - 1) ? lastchar : MAX_NAME_LEN - 1;
+//         strncpy(member->name, name, copy_len);
+//         member->name[copy_len] = '\0';
+
+//         printf("[DEBUG   ] Member name: '%s' (len=%zu, copy_len=%zu)\n",
+//                member->name, lastchar, copy_len);
+
+//         member->id = i;
+
+//         // 其他欄位
+//         printf("[DEBUG] Getting requests for row %d...\n", i);
+//         member->requests = get_member_requests(worksheet, i);
+//         printf("[DEBUG] requests=%d\n", member->requests);
+
+//         printf("[DEBUG] Getting availability for row %d...\n", i);
+//         member->availability = get_member_availability(worksheet, i);
+//         printf("[DEBUG] availability=%d\n", member->availability);
+
+//         printf("[DEBUG] Getting earliest_slot for row %d...\n", i);
+//         member->earliest_slot = get_member_earliest_slot(worksheet, i);
+//         printf("[DEBUG] earliest_slot=%d\n", member->earliest_slot);
+
+//         // 處理 ensure_score，如果 elist 不為 NULL
+//         member->ensure_score = 0;
+//         if (elist)
+//         {
+//             printf("[DEBUG] Getting ensure_score for row %d...\n", i);
+
+//             int iter_count = 0;
+//             int max_iter = 1000;  // 避免死循環
+//             member->ensure_score = -1; // 預設 -1 表示未找到
+
+//             while (iter_count < max_iter)
+//             {
+//                 member->ensure_score = get_member_ensure_score(worksheet, elist, i);
+//                 if (member->ensure_score >= 0)
+//                     break;
+
+//                 iter_count++;
+//             }
+
+//             if (iter_count == max_iter)
+//                 printf("[WARN    ] ensure_score loop exceeded max iterations at row %d\n", i);
+
+//             printf("[DEBUG] ensure_score=%d\n", member->ensure_score);
+//         }
+
+//         printf("[DEBUG] jump out of ensure_score basic block\n");
+//         // 放入列表
+//         mlist[i] = member;
+//         count++;
+//         printf("[DEBUG] finished incrementing count, the debug level is %d\n", debug_level);
+
+
+//         debug_printf(DEBUG_ALL, "[ALL     ] Finished processing row %2d: '%s'\n",
+//                      member->id, member->name);
+//     }
+
+//     debug_printf(DEBUG_INFO, "[ INFO    ] Finished generating fixed member list. Total members=%d\n", count);
+//     return count;
+// }
 
 /********************  COMPARISON FUNCTIONS FOR QSORT (START)  ********************/
 

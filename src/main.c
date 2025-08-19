@@ -1,10 +1,15 @@
-#include <getopt.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <time.h>
+
+#if defined(_WIN32) || defined(_WIN64)
+#include "getopt.h"
+#else
 #include <unistd.h>
+#include <getopt.h>
+#include <signal.h>
+#endif
 
 #include "pairup/pairup.h"
 #include "version.h"
@@ -142,7 +147,10 @@ parse_debug_level (const char *str)
 int
 main (int argc, char *argv[])
 {
+
+#ifndef _WIN32
     signal (SIGSEGV, sigsegv_handler);
+#endif
 
     /* Flags for command line arguments */
     struct pairup_options x;

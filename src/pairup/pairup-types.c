@@ -6,11 +6,28 @@
 
 /********************************  Number of practices  *********************************/
 
-const char *zero_sign[] = {"0", "０", " "};
+const char *zero_sign[] = {
+    "0",
+    "\xEF\xBC\x90", // "０" (U+FF10)
+    " "
+};
 
-const char *once_sign[] = {"1", "１", "V", "v", "X", "x", "Ｖ", "ｖ", "Ｘ", "ｘ", "once"};
+const char *once_sign[] = {
+    "1",
+    "\xEF\xBC\x91", // "１"
+    "V", "v", "X", "x",
+    "\xEF\xBC\xB6", // "Ｖ"
+    "\xEF\xBD\x96", // "ｖ"
+    "\xEF\xBC\xB8", // "Ｘ"
+    "\xEF\xBD\x98", // "ｘ"
+    "once"
+};
 
-const char *twice_sign[] = {"2", "２", "twice"};
+const char *twice_sign[] = {
+    "2",
+    "\xEF\xBC\x92", // "２"
+    "twice"
+};
 
 /**********************************  Helper functions  **********************************/
 

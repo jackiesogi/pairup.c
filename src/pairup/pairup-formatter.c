@@ -4,10 +4,10 @@
 #include "pairup-types.h"
 #include "pairup-algorithm.h"
 #include "rw-csv.h"
+#include "portable_wcwidth.h"
 
 #include <stdio.h>
 #include <string.h>
-#include <wchar.h>
 #include <locale.h>
 
 int
@@ -28,8 +28,8 @@ get_display_width (const char *str)
             int len = mbtowc (&wc, str, MB_CUR_MAX);
             if (len > 0)
             {
-                width += wcwidth (wc); // Calculate the width of the character
-                str += len;           // Skip the character
+                width += portable_wcwidth (wc); // Calculate the width of the character
+                str += len;                     // Skip the character
             }
             else
             {
@@ -62,7 +62,7 @@ print_truncated (const char *str,
             int len = mbtowc (&wc, str, MB_CUR_MAX);
             if (len > 0)
             {
-                int wc_width = wcwidth (wc);
+                int wc_width = portable_wcwidth (wc);
                 if (current_width + wc_width > max_width) break;
                 current_width += wc_width;
                 str += len;
@@ -443,6 +443,32 @@ display_summary (pair_result *result)
 int debug_level = DEBUG_NONE;
 
 /* Debug function */
+// void
+// do_if_debug_level_is_greater (int level,
+//                               callback fptr,
+//                               void *context,
+//                               const char *fmt, ...)
+// {
+//     if (level > debug_level)
+//     {
+//         return;
+//     }
+
+//     va_list args;
+//     va_start (args, fmt);
+//     va_end (args);
+
+//     if (fmt != NULL)
+//     {
+//         vprintf (fmt, args);
+//     }
+
+//     if (fptr != NULL)
+//     {
+//         fptr (context);
+//     }
+// }
+
 void
 do_if_debug_level_is_greater (int level,
                               callback fptr,
@@ -454,17 +480,16 @@ do_if_debug_level_is_greater (int level,
         return;
     }
 
-    va_list args;
-    va_start (args, fmt);
-    va_end (args);
-
     if (fmt != NULL)
     {
-        vprintf (fmt, args);
+        va_list args;
+        va_start(args, fmt);
+        vprintf(fmt, args);
+        va_end(args);
     }
 
     if (fptr != NULL)
     {
-        fptr (context);
+        fptr(context);
     }
 }
