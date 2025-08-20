@@ -111,6 +111,7 @@ pairup_options_init (struct pairup_options *x)
     x->ensure = false;
     x->priority = false;
     x->debug_level = 2;
+    x->json_output = false;
 }
 
 member_t *

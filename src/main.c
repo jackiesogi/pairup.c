@@ -36,6 +36,7 @@ Options:\n\
   -s, --show-csv              show the csv data only (no pair result)\n\
   -g, --graph={OUTPUT}        generate the relation graph\n\
   -e, --ensure={MEMBER}       ensure specified member can have partner today\n\
+  -j, --json-output           print structural output(JSON)\n\
   -d, --debug={LEVEL}         set the debug level (0: only error, 5: all info)\n\
   -p, --priority={FUNC}       specify the match priority algorithm\n\
   -v, --version               print the version information\n\
@@ -60,7 +61,7 @@ has_installed_graphviz ()
     return false;
 }
 
-static char const short_options[] = "d:sg::e:p:vh";
+static char const short_options[] = "d:sg::e:jp:vh";
 
 static struct option const long_options[] =
 {
@@ -68,6 +69,7 @@ static struct option const long_options[] =
     {"graph", optional_argument, NULL, 'g'},
     {"priority", required_argument, NULL, 'p'},
     {"ensure", required_argument, NULL, 'e'},
+    {"json-output", no_argument, NULL, 'j'},
     {"debug", required_argument, NULL, 'd'},
     {"version", no_argument, NULL, 'v'},
     {"help", no_argument, NULL, 'h'},
@@ -179,6 +181,9 @@ main (int argc, char *argv[])
                 x.ensure = true;
                 append_user_defined_ensure_list (&elist, optarg);
                 break;
+            case 'j':
+                x.json_output = true;
+                break;
             case 'p':
                 x.priority = true;
                 strncpy(x.priority_func, optarg, 1024);
@@ -235,7 +240,18 @@ main (int argc, char *argv[])
     pair_result_t *result = pairup (&worksheet, &x);
 
     /* Print the result */
-    print_result (&worksheet, result);
+    if (x.json_output == true)
+    {
+        cJSON *root = init_result_json_object (&worksheet, result);
+        char *json_output = get_result_json_string (root);
+        fprintf (stdout, "%s\n", json_output);
+        free_result_json_object (root);
+        free_result_json_string (json_output);
+    }
+    else
+    {
+        print_result (&worksheet, result);
+    }
 
     free_pair_result (result);
 

@@ -4,6 +4,7 @@
 #include "pairup-types.h"
 #include "pairup-algorithm.h"
 #include "rw-csv.h"
+#include "cJSON.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -468,3 +469,66 @@ do_if_debug_level_is_greater (int level,
         fptr (context);
     }
 }
+
+// init_result_json_object (void)
+cJSON *init_result_json_object (sheet_t *workseet,
+                                result_t *r)
+{
+    cJSON *root = NULL;
+    cJSON *result_paired_array = NULL;
+    cJSON *result_single_array = NULL;
+
+    root = cJSON_CreateObject ();
+    cJSON_AddNumberToObject (root, "exit_code", 0);
+    cJSON_AddStringToObject (root, "exit_msg", "Completed without error");
+    cJSON_AddStringToObject (root, "algorithm", r->algorithm_applied->name);
+    cJSON_AddNumberToObject (root, "n_successful_req", r->pairs * 2);
+    cJSON_AddNumberToObject (root, "n_failed_req", r->singles);
+
+    result_paired_array = cJSON_CreateArray();
+    for (int i = 0; i < r->pairs; ++i)
+    {
+        pair_t *current = r->pair_list[i];
+        cJSON *new_pair = cJSON_CreateObject();
+        cJSON_AddStringToObject(new_pair, "matched_time", get_time_slot(workseet, current->time));
+        cJSON_AddStringToObject(new_pair, "member_a", current->a->name);
+        cJSON_AddStringToObject(new_pair, "member_b", current->b->name);
+        cJSON_AddItemToArray(result_paired_array, new_pair);
+    }
+
+    result_single_array = cJSON_CreateArray();
+    for (int i = 0; i < r->singles; ++i)
+    {
+        member_t *current = r->single_list[i];
+        cJSON_AddItemToArray(result_single_array, cJSON_CreateString(current->name));
+    }
+
+    cJSON_AddItemToObject(root, "result_paired", result_paired_array);
+    cJSON_AddItemToObject(root, "result_single", result_single_array);
+
+    return root;
+}
+
+void free_result_json_object (cJSON *root)
+{
+    if (root) {
+        cJSON_Delete (root);
+    }
+}
+
+void free_result_json_string (char *str)
+{
+    if (str)
+    {
+        cJSON_free(str);
+    }
+}
+
+// set_result_exit_code (int)
+// set_result_exit_msg (const char)
+// set_result_n_sucessful_req (int)
+// set_result_n_failed_req (int)
+//
+// set_result_matched_array ()
+// set_result_single_array ()
+// get_result_json_string () == cJSON_Print()

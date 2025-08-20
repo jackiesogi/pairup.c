@@ -3,6 +3,7 @@
 
 #include "pairup-types.h"
 #include "rw-csv.h"
+#include "cJSON.h"
 
 #define GREETING "Enjoy the chat with your partner!💬"
 
@@ -90,5 +91,14 @@ void do_if_debug_level_is_greater (int level,
                                   callback fptr,
                                   void *context,
                                   const char *fmt, ...);
+
+cJSON *init_result_json_object (sheet_t *workseet,
+                                result_t *r);
+
+void free_result_json_object (cJSON *root);
+
+void free_result_json_string (char *str);
+
+#define get_result_json_string cJSON_Print
 
 #endif  // PAIRUP_FORMATTER_H

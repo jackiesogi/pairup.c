@@ -93,6 +93,17 @@ struct relation_graph
     relation *relations[MAX_MATCHES_LEN];        // Relations
 };
 
+typedef pair_result *
+(*pairup_internal) (relation_graph *today,
+                    member_t *member_list[]);
+
+struct pairup_algorithm
+{
+    const char *name;
+    const pairup_internal algorithm;
+    /*int (*compare_fn)(const void *, const void *);*/
+};
+
 /* A pair result contains the successful pairs and the remaining singles */
 struct pair_result
 {
@@ -122,6 +133,7 @@ struct user_defined_ensure_list
 struct pairup_options
 {
     bool show_csv;
+    bool json_output;
     bool generate_graph;
     char graph_output[1024];
     bool ensure;

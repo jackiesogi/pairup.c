@@ -13,6 +13,7 @@ set(BUILD_DIR ${CMAKE_BINARY_DIR}/build)
 include_directories(${LIB_DIR} ${SRC_DIR})
 
 add_library(librwcsv STATIC ${LIB_DIR}/rw-csv.c)
+add_library(libcjson STATIC ${LIB_DIR}/cJSON.c)
 
 set(PAIRUP_SOURCES
     ${SRC_DIR}/pairup/pairup-algorithm.c
@@ -56,7 +57,7 @@ configure_file(
 )
 
 add_executable(main ${MAIN_SOURCE} ${VERSION_FILE})
-target_link_libraries(main librwcsv pairup)
+target_link_libraries(main librwcsv libcjson pairup)
 target_include_directories(main PUBLIC ${SRC_DIR})
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

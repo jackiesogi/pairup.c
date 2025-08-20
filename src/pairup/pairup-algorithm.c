@@ -18,13 +18,6 @@ typedef struct pairup_algorithm pairup_algorithm;  // Recommended
 typedef struct pairup_algorithm algorithm_t;
 typedef struct pairup_algorithm algorithm;
 
-struct pairup_algorithm
-{
-    const char *name;
-    const pairup_internal algorithm;
-    /*int (*compare_fn)(const void *, const void *);*/
-};
-
 /* Various pre-defined priority */
 /* Technically, `pairup_algorithms[]` is an array with several function pointers */
 /* pointing to corresponding priority functions */
