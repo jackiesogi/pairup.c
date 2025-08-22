@@ -470,7 +470,30 @@ do_if_debug_level_is_greater (int level,
     }
 }
 
-// init_result_json_object (void)
+// cJSON *new_format_error_json_object ()
+// {
+//     cJSON *root = NULL;
+//     cJSON *result_paired_array = NULL;
+//     cJSON *result_single_array = NULL;
+
+//     debug_printf (DEBUG_INFO, "Initializing a JSON object with pair result ...\n");
+//     root = cJSON_CreateObject ();
+//     cJSON_AddNumberToObject (root, "exit_code", 1);
+//     cJSON_AddStringToObject (root, "exit_msg", "Invalid worksheet format");
+//     cJSON_AddStringToObject (root, "algorithm", "N/A");
+//     cJSON_AddNumberToObject (root, "n_successful_req", 0);
+//     cJSON_AddNumberToObject (root, "n_failed_req", 0);
+
+//     result_paired_array = cJSON_CreateArray ();
+//     result_single_array = cJSON_CreateArray ();
+
+//     cJSON_AddItemToObject (root, "result_paired", result_paired_array);
+//     cJSON_AddItemToObject (root, "result_single", result_single_array);
+
+//     return root;
+// }
+
+// init_result_json_object(void)
 cJSON *init_result_json_object (sheet_t *workseet,
                                 result_t *r)
 {
@@ -478,6 +501,7 @@ cJSON *init_result_json_object (sheet_t *workseet,
     cJSON *result_paired_array = NULL;
     cJSON *result_single_array = NULL;
 
+    debug_printf (DEBUG_INFO, "Initializing a JSON object with pair result ...\n");
     root = cJSON_CreateObject ();
     cJSON_AddNumberToObject (root, "exit_code", 0);
     cJSON_AddStringToObject (root, "exit_msg", "Completed without error");
@@ -485,26 +509,28 @@ cJSON *init_result_json_object (sheet_t *workseet,
     cJSON_AddNumberToObject (root, "n_successful_req", r->pairs * 2);
     cJSON_AddNumberToObject (root, "n_failed_req", r->singles);
 
-    result_paired_array = cJSON_CreateArray();
+    debug_printf (DEBUG_INFO, "Creating JSON array and filling with paired members ...\n");
+    result_paired_array = cJSON_CreateArray ();
     for (int i = 0; i < r->pairs; ++i)
     {
         pair_t *current = r->pair_list[i];
-        cJSON *new_pair = cJSON_CreateObject();
-        cJSON_AddStringToObject(new_pair, "matched_time", get_time_slot(workseet, current->time));
-        cJSON_AddStringToObject(new_pair, "member_a", current->a->name);
-        cJSON_AddStringToObject(new_pair, "member_b", current->b->name);
-        cJSON_AddItemToArray(result_paired_array, new_pair);
+        cJSON *new_pair = cJSON_CreateObject ();
+        cJSON_AddStringToObject (new_pair, "matched_time", get_time_slot(workseet, current->time));
+        cJSON_AddStringToObject (new_pair, "member_a", current->a->name);
+        cJSON_AddStringToObject (new_pair, "member_b", current->b->name);
+        cJSON_AddItemToArray (result_paired_array, new_pair);
     }
 
-    result_single_array = cJSON_CreateArray();
+    debug_printf (DEBUG_INFO, "Creating JSON array and filling with single member ...\n");
+    result_single_array = cJSON_CreateArray ();
     for (int i = 0; i < r->singles; ++i)
     {
         member_t *current = r->single_list[i];
-        cJSON_AddItemToArray(result_single_array, cJSON_CreateString(current->name));
+        cJSON_AddItemToArray (result_single_array, cJSON_CreateString(current->name));
     }
 
-    cJSON_AddItemToObject(root, "result_paired", result_paired_array);
-    cJSON_AddItemToObject(root, "result_single", result_single_array);
+    cJSON_AddItemToObject (root, "result_paired", result_paired_array);
+    cJSON_AddItemToObject (root, "result_single", result_single_array);
 
     return root;
 }

@@ -92,6 +92,8 @@ void do_if_debug_level_is_greater (int level,
                                   void *context,
                                   const char *fmt, ...);
 
+cJSON *new_format_error_json_object ();
+
 cJSON *init_result_json_object (sheet_t *workseet,
                                 result_t *r);
 
