@@ -546,7 +546,7 @@ cJSON *init_result_json_object (sheet_t *workseet,
         cJSON_AddItemToArray (result_paired_array, new_pair);
     }
 
-    debug_printf (DEBUG_INFO, "Creating JSON array and filling with single member ...\n");
+    debug_printf (DEBUG_INFO, "Creating JSON array and filling with single members ...\n");
     result_single_array = cJSON_CreateArray ();
     for (int i = 0; i < r->singles; ++i)
     {
