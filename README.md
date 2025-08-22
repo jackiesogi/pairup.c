@@ -12,7 +12,9 @@ This program provides a solution to help members in English study group to pair 
 
 ![](./img/graph.png)
 
-## How to build (Ubuntu 22.04)
+## How to build
+
+### Ubuntu 22.04
 
 - Install the required packages.
 ```bash
@@ -27,7 +29,6 @@ cd pairup.c
 
 - Run `make` to build the program.
 ```bash
-mkdir build
 (mkdir -p build; cd build; cmake ..; make)
 ```
 
@@ -40,3 +41,21 @@ mkdir build
 ```bash
 ./pairup --help
 ```
+
+### Windows 10
+
+- Install `Visual Studio`, `cmake`, `git`
+
+- Clone the repository.
+```bash
+git clone https://github.com/jackiesogi/pairup.c.git
+cd pairup.c
+```
+
+- Configure
+```bash
+mkdir build; cd build
+cmake ..; cd ..
+cmake --build build --target main
+```
+After successful build, you'll see `pairup.exe` in the root directory.
