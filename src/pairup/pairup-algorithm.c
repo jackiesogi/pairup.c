@@ -213,20 +213,20 @@ pairup (sheet *worksheet,
     result *best = NULL, *temp = NULL;
     int id = -1;
 
+    int max_success_rate = 0;
     int current_success_rate = 0;
-    int temp_success_rate = 0;
+    int current_total_requests = (temp && temp->total_requests > 0) ? temp->total_requests : 1;
     for (int i = 0; a[i].algorithm != NULL; i++)
     {
         pairup_internal algorithm;
 
-        int total_requests = (temp && temp->total_requests > 0) ? temp->total_requests : 1;
-        temp_success_rate = (temp) ? (temp->pairs * 200 / total_requests) : temp_success_rate;
-        if (temp_success_rate > current_success_rate)
-            current_success_rate = temp_success_rate;
+        current_success_rate = (temp) ? (temp->pairs * 200 / current_total_requests) : current_success_rate;
+        if (current_success_rate > max_success_rate)
+            max_success_rate = current_success_rate;
 
         debug_printf (DEBUG_INFO, "\
 [ INFO    ] Current successful request rate is at %d\%, trying next one ...\n",
-current_success_rate);
+max_success_rate);
 
         /* If --ensure={MEMBER} is used, then we do not care  */
         /* about the pre-defined algorithm. Instead, we tried */ 
@@ -286,12 +286,13 @@ current_success_rate);
             }
         }
 
+        current_total_requests = (temp && temp->total_requests > 0) ? temp->total_requests : 1;
         if (should_update_best)
         {
             debug_printf (DEBUG_INFO, "\
 [ INFO    ] %s has better successful request rate (%3d\%) than previous one, updating ...\n",
 temp->algorithm_applied->name,
-(temp->pairs * 200 / temp->total_requests));
+(temp->pairs * 200 / current_total_requests));
             if (best)
             {
                 free_pair_result (best);
@@ -304,7 +305,7 @@ temp->algorithm_applied->name,
             debug_printf (DEBUG_INFO, "\
 [ INFO    ] %s does not have a better successful request rate (%3d\%), skipping ...\n",
 temp->algorithm_applied->name,
-(temp->pairs * 200 / temp->total_requests));
+(temp->pairs * 200 / current_total_requests));
 
             free_pair_result (temp);
         }
