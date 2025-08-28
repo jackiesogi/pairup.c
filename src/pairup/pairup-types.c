@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include "pairup-types.h"
 #include "cJSON.h"
+#include "pairup-avoidance.h"
 
 /********************************  Number of practices  *********************************/
 
@@ -237,6 +238,20 @@ int history_save_update (void *vctx, const char *path, const char *week, pair_re
     return 0;
 }
 
+int history_identical_percentage (void *vctx, const char *week, pair_result *r)
+{
+    if (!vctx || !week || !r) return 0;
+    int identical = 0;
+    for (int i = 0; i < r->pairs; ++i)
+    {
+        const char *a = r->pair_list[i]->a->name;
+        const char *b = r->pair_list[i]->b->name;
+        if (history_was_paired(vctx, week, a, b)) identical++;
+    }
+    int denom = (r->pairs > 0) ? r->pairs : 1;
+    return (identical * 100) / denom;
+}
+
 /* Convert the string to lower case */
 void to_upper (const char *str, char *result)
 {
@@ -325,6 +340,7 @@ pairup_options_init (struct pairup_options *x)
     x->avoid_week[0] = '\0';
     x->history_path[0] = '\0';
     x->history_ctx = NULL;
+    x->avoid_strength = AVOID_STRENGTH_HIGH;
 }
 
 member_t *

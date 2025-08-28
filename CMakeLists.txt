@@ -20,6 +20,7 @@ set(PAIRUP_SOURCES
     ${SRC_DIR}/pairup/pairup-algorithm.c
     ${SRC_DIR}/pairup/pairup-formatter.c
     ${SRC_DIR}/pairup/pairup-types.c
+    ${SRC_DIR}/pairup/pairup-avoidance.c
 )
 
 add_library(pairup STATIC ${PAIRUP_SOURCES})

@@ -12,6 +12,7 @@
 #endif
 
 #include "pairup/pairup.h"
+#include "pairup/pairup-avoidance.h"
 #include "version.h"
 #include "rw-csv.h"
 
@@ -45,6 +46,7 @@ Options:\n\
   -d, --debug={LEVEL}         set the debug level (0: only error, 5: all info)\n\
   -p, --priority={FUNC}       specify the match priority algorithm\n\
   -A, --avoid-same-match=WEEK avoid pairing same partners within the same week; write history JSON\n\
+  -S, --avoid-strength=LEVEL  specify avoidance strength: LOW | MEDIUM | HIGH (default: HIGH)\n\
   -v, --version               print the version information\n\
   -h, --help                  print this page\n\n\
 Examples:\n\
@@ -68,7 +70,7 @@ has_installed_graphviz ()
     return false;
 }
 
-static char const short_options[] = "d:sg::e:jp:A:vh";
+static char const short_options[] = "d:sg::e:jp:A:S:vh";
 
 static struct option const long_options[] =
 {
@@ -78,6 +80,7 @@ static struct option const long_options[] =
     {"ensure", required_argument, NULL, 'e'},
     {"json-output", no_argument, NULL, 'j'},
     {"avoid-same-match", required_argument, NULL, 'A'},
+    {"avoid-strength", required_argument, NULL, 'S'},
     {"debug", required_argument, NULL, 'd'},
     {"version", no_argument, NULL, 'v'},
     {"help", no_argument, NULL, 'h'},
@@ -213,6 +216,18 @@ main (int argc, char *argv[])
                 /* default history file next to SOURCE_CSV with name already-pair.json */
                 strcpy(x.history_path, "already-pair.json");
                 break;
+            case 'S':
+                if (optarg)
+                {
+                    char up[32];
+                    up[0] = '\0';
+                    for (int i = 0; optarg[i] && i < (int)sizeof(up)-1; ++i) up[i] = toupper(optarg[i]);
+                    up[strlen(optarg)] = '\0';
+                    if (strncmp(up, "LOW", 32) == 0) x.avoid_strength = AVOID_STRENGTH_LOW;
+                    else if (strncmp(up, "MEDIUM", 32) == 0) x.avoid_strength = AVOID_STRENGTH_MEDIUM;
+                    else x.avoid_strength = AVOID_STRENGTH_HIGH;
+                }
+                break;
             case 'v':
                 printf ("%s\n", PROGRAM_VERSION);
                 return 0;
@@ -266,9 +281,84 @@ main (int argc, char *argv[])
     shuffle_worksheet (&worksheet, time(NULL));
     debug_printf(DEBUG_INFO, "[ INFO    ] Finished shuffling.\n");
 
-    /* Trigger the top-level pairup function */
+    /* Trigger the top-level pairup function, with retry strategy if avoidance is enabled */
     debug_printf(DEBUG_INFO, "[ INFO    ] Starting the pairing up process ...\n");
-    pair_result_t *result = pairup (&worksheet, &x);
+
+    pair_result_t *result = NULL;
+    if (x.avoid_same_match)
+    {
+        const int MAX_TRIES = 30;
+        const int SUCCESS_THRESHOLD_HIGH = 80; /* percent */
+        const int SUCCESS_THRESHOLD_MEDIUM = 70; /* percent */
+        const int SUCCESS_THRESHOLD_LOW = 0; /* percent */
+        int best_rate = -1;
+        int best_identical = 101;
+        pair_result_t *best = NULL;
+
+        for (int attempt = 0; attempt < MAX_TRIES; ++attempt)
+        {
+            if (attempt > 0)
+            {
+                /* reshuffle to explore alternative matchings */
+                shuffle_worksheet (&worksheet, (time(NULL) + attempt));
+            }
+
+            pair_result_t *temp = pairup (&worksheet, &x);
+
+            int total_requests = (temp && temp->total_requests > 0) ? temp->total_requests : 1;
+            int current_rate = (temp->pairs * 200 / total_requests);
+            int current_identical = history_identical_percentage(x.history_ctx, x.avoid_week, temp);
+
+            /* Selection policy by strength */
+            bool is_better = false;
+            if (x.avoid_strength == AVOID_STRENGTH_HIGH)
+            {
+                is_better = (current_rate > best_rate) || (current_rate == best_rate && current_identical < best_identical);
+            }
+            else if (x.avoid_strength == AVOID_STRENGTH_MEDIUM)
+            {
+                /* prioritize success rate >= 70, tie break by lower identical */
+                if (current_rate >= SUCCESS_THRESHOLD_MEDIUM && best_rate < SUCCESS_THRESHOLD_MEDIUM)
+                    is_better = true;
+                else if ((current_rate >= SUCCESS_THRESHOLD_MEDIUM && best_rate >= SUCCESS_THRESHOLD_MEDIUM) ||
+                         (current_rate == best_rate))
+                    is_better = (current_identical < best_identical) || (current_rate > best_rate);
+                else
+                    is_better = (current_rate > best_rate);
+            }
+            else /* LOW */
+            {
+                /* prioritize uniqueness first, then success rate */
+                is_better = (current_identical < best_identical) || (current_identical == best_identical && current_rate > best_rate);
+            }
+
+            if (is_better)
+            {
+                if (best) free_pair_result (best);
+                best = temp;
+                best_rate = current_rate;
+                best_identical = current_identical;
+            }
+            else
+            {
+                free_pair_result (temp);
+            }
+
+            int threshold = (x.avoid_strength == AVOID_STRENGTH_HIGH) ? SUCCESS_THRESHOLD_HIGH :
+                            (x.avoid_strength == AVOID_STRENGTH_MEDIUM) ? SUCCESS_THRESHOLD_MEDIUM : SUCCESS_THRESHOLD_LOW;
+            if (best_rate >= threshold)
+            {
+                debug_printf (DEBUG_INFO, "[ INFO    ] Reached threshold %d%% at attempt %d.\n", threshold, attempt+1);
+                break;
+            }
+        }
+
+        result = best;
+    }
+    else
+    {
+        result = pairup (&worksheet, &x);
+    }
 
     /* Print the result */
     if (x.json_output == true)

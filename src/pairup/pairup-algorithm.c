@@ -7,6 +7,7 @@
 #include "pairup-types.h"
 #include "pairup-formatter.h"
 #include "rw-csv.h"
+#include "pairup-avoidance.h"
 
 /* Pairup algorithm (internal) */
 typedef pair_result *
@@ -848,7 +849,7 @@ preprocess_relation_graph (sheet *worksheet,
 
                     if (is_available(cell) && k != i)
                     {
-                        if (x && x->avoid_same_match && x->history_ctx && x->avoid_week[0] != '\0')
+                        if (x && x->avoid_same_match && x->history_ctx && x->avoid_week[0] != '\0' && x->avoid_strength == AVOID_STRENGTH_HIGH)
                         {
                             const char *name_a = mlist[i]->name;
                             const char *name_b = mlist[k]->name;

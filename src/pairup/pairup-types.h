@@ -49,6 +49,12 @@ typedef struct pair_result result;
 
 typedef struct user_defined_ensure_list ensure_list;
 typedef struct user_defined_ensure_list udel;
+/* Avoid same match strength */
+typedef enum avoid_strength_level {
+    AVOID_STRENGTH_LOW = 0,
+    AVOID_STRENGTH_MEDIUM = 1,
+    AVOID_STRENGTH_HIGH = 2,
+} avoid_strength_level;
 
 /**********************************  Data types  **************************************/
 
@@ -146,6 +152,7 @@ struct pairup_options
     char avoid_week[128];
     char history_path[1024];
     void *history_ctx;  // opaque pointer to history context
+    avoid_strength_level avoid_strength;
 };
 
 /********************************  Number of practices  *********************************/
@@ -171,10 +178,7 @@ bool is_available (const char *sign);
 void
 pairup_options_init (struct pairup_options *x);
 
-/* History JSON helpers */
-void *history_load (const char *path);
-bool history_was_paired (void *ctx, const char *week, const char *a, const char *b);
-int  history_save_update (void *ctx, const char *path, const char *week, pair_result *result);
+/* moved to pairup-avoidance.h */
 
 member_t *
 new_member (void);
