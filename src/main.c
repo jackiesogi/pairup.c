@@ -44,6 +44,7 @@ Options:\n\
   -j, --json-output           print structural output(JSON)\n\
   -d, --debug={LEVEL}         set the debug level (0: only error, 5: all info)\n\
   -p, --priority={FUNC}       specify the match priority algorithm\n\
+  -A, --avoid-same-match=WEEK avoid pairing same partners within the same week; write history JSON\n\
   -v, --version               print the version information\n\
   -h, --help                  print this page\n\n\
 Examples:\n\
@@ -51,9 +52,10 @@ Examples:\n\
   %s -s '英文讀書會時間 Ver.4.csv'           # show the csv data only\n\
   %s -g '英文讀書會時間 Ver.4.csv'           # generate 'relations.png' pairing graph\n\
   %s -p LAST_ROW '英文讀書會時間 Ver.4.csv'  # match member from the last row\n\
-  %s -e 'Bob' '英文讀書會時間 Ver.4.csv'     # match Bob first\n\n\
+  %s -e 'Bob' '英文讀書會時間 Ver.4.csv'     # match Bob first\n\
+  %s -A 2025-W35 data.csv                    # avoid re-pairing happened in week 2025-W35\n\n\
 For more information, see <https://github.com/jackiesogi/pairup.c>.\n\
-", program_name, program_name, program_name, program_name, program_name, program_name);
+", program_name, program_name, program_name, program_name, program_name, program_name, program_name);
     }
     exit (status);
 }
@@ -66,7 +68,7 @@ has_installed_graphviz ()
     return false;
 }
 
-static char const short_options[] = "d:sg::e:jp:vh";
+static char const short_options[] = "d:sg::e:jp:A:vh";
 
 static struct option const long_options[] =
 {
@@ -75,6 +77,7 @@ static struct option const long_options[] =
     {"priority", required_argument, NULL, 'p'},
     {"ensure", required_argument, NULL, 'e'},
     {"json-output", no_argument, NULL, 'j'},
+    {"avoid-same-match", required_argument, NULL, 'A'},
     {"debug", required_argument, NULL, 'd'},
     {"version", no_argument, NULL, 'v'},
     {"help", no_argument, NULL, 'h'},
@@ -196,6 +199,20 @@ main (int argc, char *argv[])
                 x.priority = true;
                 strncpy(x.priority_func, optarg, 1024);
                 break;
+            case 'A':
+                x.avoid_same_match = true;
+                if (optarg)
+                {
+                    strncpy(x.avoid_week, optarg, sizeof(x.avoid_week)-1);
+                    x.avoid_week[sizeof(x.avoid_week)-1] = '\0';
+                }
+                else
+                {
+                    strcpy(x.avoid_week, "UNKNOWN-WEEK");
+                }
+                /* default history file next to SOURCE_CSV with name already-pair.json */
+                strcpy(x.history_path, "already-pair.json");
+                break;
             case 'v':
                 printf ("%s\n", PROGRAM_VERSION);
                 return 0;
@@ -221,6 +238,12 @@ main (int argc, char *argv[])
 
     /* Read the csv file */
     sheet_t worksheet = read_csv (path);
+
+    /* Load history if needed */
+    if (x.avoid_same_match)
+    {
+        x.history_ctx = history_load(x.history_path);
+    }
 
     if (x.generate_graph)
     {
@@ -261,6 +284,10 @@ main (int argc, char *argv[])
         print_result (&worksheet, result);
     }
 
+    if (x.avoid_same_match && x.history_ctx)
+    {
+        history_save_update(x.history_ctx, x.history_path, x.avoid_week, result);
+    }
     free_pair_result (result);
 
     debug_printf(DEBUG_INFO, "[ INFO    ] Done!\n");

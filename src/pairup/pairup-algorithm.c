@@ -78,7 +78,8 @@ preprocess_fixed_memblist (sheet *worksheet,
 static void
 preprocess_relation_graph (sheet *worksheet,
                            graph *today,
-                           member *mlist[]);
+                           member *mlist[],
+                           struct pairup_options *x);
 
 static int
 get_random_int (void);
@@ -207,7 +208,7 @@ pairup (sheet *worksheet,
     /* Generate relations using the existing member_list */
     /* This will take in the empty member_list and fill it with the available members */
     preprocess_fixed_memblist (worksheet, member_list, (void *)x->ensure_member_list);
-    preprocess_relation_graph (worksheet, graph, member_list);
+    preprocess_relation_graph (worksheet, graph, member_list, x);
 
     /* Initialize the best result and temporary result */
     result *best = NULL, *temp = NULL;
@@ -342,7 +343,7 @@ pairup_graph (sheet *worksheet)
     /* Generate relations using the existing member_list */
     /* This will take in the empty member_list and fill it with the available members */
     preprocess_fixed_memblist (worksheet, member_list, NULL);
-    preprocess_relation_graph (worksheet, graph, member_list);
+    preprocess_relation_graph (worksheet, graph, member_list, NULL);
 
     pairup_internal algorithm = a[0].algorithm;
 
@@ -801,7 +802,8 @@ find_member_id (graph *today,
 static void 
 preprocess_relation_graph (sheet *worksheet,
                            graph *today,
-                           member *mlist[])
+                           member *mlist[],
+                           struct pairup_options *x)
 {
     int i, j, k;
     char cell[8];
@@ -846,6 +848,15 @@ preprocess_relation_graph (sheet *worksheet,
 
                     if (is_available(cell) && k != i)
                     {
+                        if (x && x->avoid_same_match && x->history_ctx && x->avoid_week[0] != '\0')
+                        {
+                            const char *name_a = mlist[i]->name;
+                            const char *name_b = mlist[k]->name;
+                            if (history_was_paired(x->history_ctx, x->avoid_week, name_a, name_b))
+                            {
+                                continue;
+                            }
+                        }
                         if (row->count >= MAX_MATCHES_LEN - 1)
                         {
                             break;

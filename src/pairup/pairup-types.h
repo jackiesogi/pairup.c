@@ -141,6 +141,11 @@ struct pairup_options
     bool priority;
     char priority_func[1024];
     int  debug_level;
+    /* Avoid pairing the same partners within a week */
+    bool avoid_same_match;
+    char avoid_week[128];
+    char history_path[1024];
+    void *history_ctx;  // opaque pointer to history context
 };
 
 /********************************  Number of practices  *********************************/
@@ -165,6 +170,11 @@ bool is_available (const char *sign);
 
 void
 pairup_options_init (struct pairup_options *x);
+
+/* History JSON helpers */
+void *history_load (const char *path);
+bool history_was_paired (void *ctx, const char *week, const char *a, const char *b);
+int  history_save_update (void *ctx, const char *path, const char *week, pair_result *result);
 
 member_t *
 new_member (void);
