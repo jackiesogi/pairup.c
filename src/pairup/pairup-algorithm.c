@@ -436,6 +436,12 @@ static char *
 get_member_name (sheet *worksheet,
                  int id)
 {
+    if (!worksheet || !worksheet->data ||
+        !worksheet->data[id] ||
+        !worksheet->data[id][FILED_COL_NAME])
+    {
+        return NULL;
+    }
     return worksheet->data[id][FILED_COL_NAME];
 }
 
@@ -509,7 +515,9 @@ preprocess_fixed_memblist (sheet *worksheet,
         member *member = new_member ();
 
         char *name = get_member_name (worksheet, i);
-        size_t lastchar = strnlen (name,MAX_NAME_LEN);
+        if (name == NULL)
+            strncpy(name, " -- ", 5);
+        size_t lastchar = strnlen (name, MAX_NAME_LEN);
         strncpy (member->name, name, lastchar);
         member->name[lastchar] = '\0';
 
