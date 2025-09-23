@@ -245,7 +245,7 @@ main (int argc, char *argv[])
 
     /* Trigger the top-level pairup function */
     debug_printf(DEBUG_INFO, "[ INFO    ] Starting the pairing up process ...\n");
-    pair_result_t *result = pairup (&worksheet, &x);
+    pair_result_t *result = __pairup__ (&worksheet, &x);
 
     /* Print the result */
     if (x.json_output == true)

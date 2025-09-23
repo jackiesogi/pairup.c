@@ -7,22 +7,29 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -g")
 
 set(LIB_DIR ${CMAKE_SOURCE_DIR}/lib)
+set(API_LIB_DIR ${CMAKE_SOURCE_DIR}/src/api)
 set(SRC_DIR ${CMAKE_SOURCE_DIR}/src)
 set(BUILD_DIR ${CMAKE_BINARY_DIR}/build)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-include_directories(${LIB_DIR} ${SRC_DIR})
+include_directories(${LIB_DIR} ${SRC_DIR} ${API_LIB_DIR})
 
 add_library(librwcsv STATIC ${LIB_DIR}/rw-csv.c)
 add_library(libcjson STATIC ${LIB_DIR}/cJSON.c)
 add_library(libgetopt STATIC ${LIB_DIR}/getopt.c)
 
 set(PAIRUP_SOURCES
+    # Internal
     ${SRC_DIR}/pairup/pairup-algorithm.c
     ${SRC_DIR}/pairup/pairup-formatter.c
     ${SRC_DIR}/pairup/pairup-types.c
+    # API
+    ${SRC_DIR}/api/libpairup.c
 )
 
-add_library(pairup STATIC ${PAIRUP_SOURCES})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
+add_library(libpairup STATIC ${PAIRUP_SOURCES})
 
 set(MAIN_SOURCE ${SRC_DIR}/main.c)
 
@@ -58,7 +65,7 @@ configure_file(
 )
 
 add_executable(main ${MAIN_SOURCE} ${VERSION_FILE})
-target_link_libraries(main librwcsv libcjson libgetopt pairup)
+target_link_libraries(main librwcsv libcjson libgetopt libpairup)
 target_include_directories(main PUBLIC ${SRC_DIR})
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

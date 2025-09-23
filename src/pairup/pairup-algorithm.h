@@ -7,7 +7,7 @@
 /* Public Access API */
 /* Note that the result should be freed by the caller */
 pair_result_t *
-pairup (sheet *sheet,
+__pairup__ (sheet *sheet,
         struct pairup_options *x);
 
 relation_graph *

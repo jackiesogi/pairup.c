@@ -198,7 +198,7 @@ pairup_with_priority (graph *today,
 /* This function will iterate through all the priority functions */
 /* and choose the target result that has maximized matches */
 pair_result *
-pairup (sheet *worksheet,
+__pairup__ (sheet *worksheet,
         struct pairup_options *x)
 {
     relation_graph *graph = new_relation_graph ();
