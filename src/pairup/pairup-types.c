@@ -126,6 +126,7 @@ pairup_options_init (struct pairup_options *x)
     x->show_csv = false;
     x->generate_graph = false;
     x->ensure = false;
+    x->ensure_member_list = NULL;
     x->priority = false;
     x->debug_level = 2;
     x->json_output = false;
