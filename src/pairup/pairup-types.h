@@ -114,6 +114,7 @@ struct pair_result
     slot matched_slot[MAX_MATCHES_LEN];
     struct member *member_list[MAX_MATCHES_LEN];
     struct member *single_list[MAX_MATCHES_LEN];
+    char single_suggestion_time[MAX_MEMBERS_LEN][256];  // TODO: find better way avoid BOF
     pair *pair_list[MAX_MATCHES_LEN];
     struct pairup_algorithm *algorithm_applied;
 };

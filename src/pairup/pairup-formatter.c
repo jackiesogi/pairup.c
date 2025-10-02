@@ -11,6 +11,11 @@
 #include <string.h>
 #include <locale.h>
 
+/*
+ * TODO: Be able to retrieve single member's time suggestion from `result` object
+ * because right now the following two function are just duplicated logic from
+ * `pairup-algorithm.c`, which is really bad!
+ */
 static void
 append_range_string (sheet_t *worksheet,
                       int start_col,
@@ -472,23 +477,7 @@ print_result (sheet *worksheet,
         for (int i = 0; i < result->singles; i++)
         {
             member_t *member = result->single_list[i];
-            char ranges[64][32];
-            int n_ranges = 0;
-            collect_available_ranges (worksheet, member->id, ranges, &n_ranges);
-
-            if (n_ranges == 0)
-            {
-                printf ("@%s\n", member->name);
-            }
-            else
-            {
-                printf ("@%s (", member->name);
-                for (int k = 0; k < n_ranges; k++)
-                {
-                    printf ("%s%s", ranges[k], (k == n_ranges - 1) ? "" : ", ");
-                }
-                printf (")\n");
-            }
+            printf("@%s (%s)\n", member->name, result->single_suggestion_time[i]);
         }
     }
 
