@@ -520,10 +520,10 @@ display_summary (pair_result *result)
 {
     size_t M = result->member;
     size_t P = result->pairs;
-    size_t NP = result->singles;
+    /*size_t NP = result->singles;*/
     size_t REQ = result->total_requests;
     size_t SREQ = P << 1;
-    size_t NREQ = NP;
+    size_t NREQ = REQ - SREQ;
 
     int RATIO_SREQ, RATIO_NREQ;
     if (REQ == 0)
