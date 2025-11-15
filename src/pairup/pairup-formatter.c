@@ -80,7 +80,7 @@ collect_available_ranges (sheet_t *worksheet,
     int last_col = -1;
     int out_count = 0;
 
-    for (int j = FILED_COL_START; j <= FILED_COL_END; j++)
+    for (int j = FIELD_COL_START; j <= FIELD_COL_END; j++)
     {
         get_cell (worksheet, row, j, cell, sizeof(cell));
         int available = is_available (cell);
@@ -210,8 +210,8 @@ print_worksheet (sheet *worksheet)
         for (int j = 0; j < worksheet->cols; j++)
         {
             char *cell = worksheet->data[i][j];
-            int is_special_col = (j == FILED_COL_NAME || j == FILED_COL_END + 1);
-            int is_field_col = (j >= FILED_COL_START && j <= FILED_COL_END && i >= FILED_ROW_START);
+            int is_special_col = (j == FIELD_COL_NAME || j == FIELD_COL_END + 1);
+            int is_field_col = (j >= FIELD_COL_START && j <= FIELD_COL_END && i >= FIELD_ROW_START);
 
             if (is_field_col)
             {
