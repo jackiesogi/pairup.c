@@ -523,7 +523,7 @@ get_member_availability (sheet *worksheet,
     int j, count = 0;
     char cell[8];
 
-    for (j = FILED_COL_START; j <= FILED_COL_END; j++)
+    for (j = FIELD_COL_START; j <= FIELD_COL_END; j++)
     {
         get_cell (worksheet, id, j, cell, sizeof(cell));
         if (is_available(cell))
@@ -542,7 +542,7 @@ get_member_earliest_slot (sheet *worksheet,
     int j;
     char cell[8];
 
-    for (j = FILED_COL_START; j <= FILED_COL_END; j++)
+    for (j = FIELD_COL_START; j <= FIELD_COL_END; j++)
     {
         get_cell (worksheet, id, j, cell, sizeof(cell));
         if (is_available(cell))
@@ -561,7 +561,7 @@ get_member_requests (sheet *worksheet,
     int j;
     char cell[8];
 
-    for (j = FILED_COL_START; j <= FILED_COL_END; j++)
+    for (j = FIELD_COL_START; j <= FIELD_COL_END; j++)
     {
         get_cell (worksheet, id, j, cell, sizeof(cell));
         if (is_once(cell))
@@ -581,7 +581,13 @@ static char *
 get_member_name (sheet *worksheet,
                  int id)
 {
-    return worksheet->data[id][FILED_COL_NAME];
+    if (!worksheet || !worksheet->data ||
+        !worksheet->data[id] ||
+        !worksheet->data[id][FIELD_COL_NAME])
+    {
+        return NULL;
+    }
+    return worksheet->data[id][FIELD_COL_NAME];
 }
 
 /* New feature under development */
@@ -589,9 +595,9 @@ static int
 get_row_id_by_name (sheet *worksheet,
                     const char *name)
 {
-    for (int i = FILED_ROW_START; i < worksheet->rows; i++)
+    for (int i = FIELD_ROW_START; i < worksheet->rows; i++)
     {
-        if (strcmp(name, worksheet->data[i][FILED_COL_NAME]) == 0)
+        if (strcmp(name, worksheet->data[i][FIELD_COL_NAME]) == 0)
         {
             return i;
         }
@@ -649,12 +655,14 @@ preprocess_fixed_memblist (sheet *worksheet,
 
     debug_printf(DEBUG_INFO, "[ INFO    ] Generating fixed member list ...\n");
 
-    for (i = FILED_ROW_START; i < worksheet->rows - 1; i++)
+    for (i = FIELD_ROW_START; i < worksheet->rows - 1; i++)
     {
         member *member = new_member ();
 
         char *name = get_member_name (worksheet, i);
-        size_t lastchar = strnlen (name,MAX_NAME_LEN);
+        if (name == NULL)
+            strncpy(name, " -- ", 5);
+        size_t lastchar = strnlen (name, MAX_NAME_LEN);
         strncpy (member->name, name, lastchar);
         member->name[lastchar] = '\0';
 
@@ -696,7 +704,7 @@ member->ensure_score);
 
 //     printf("[DEBUG   ] worksheet->rows=%d, worksheet->cols=%d\n", worksheet->rows, worksheet->cols);
 
-//     for (i = FILED_ROW_START; i < worksheet->rows - 1; i++)
+//     for (i = FIELD_ROW_START; i < worksheet->rows - 1; i++)
 //     {
 //         printf("[DEBUG   ] Processing row %d...\n", i);
 
@@ -954,13 +962,13 @@ preprocess_relation_graph (sheet *worksheet,
     today->count = 0;
 
     /* Scan each row (members' name) */
-    for (i = FILED_ROW_START; i < worksheet->rows-1; i++)
+    for (i = FIELD_ROW_START; i < worksheet->rows-1; i++)
     {
         first = true;
         relation *row = NULL;
 
         /* Scan each column (time slots) */
-        for (j = FILED_COL_START; j <= FILED_COL_END; j++)
+        for (j = FIELD_COL_START; j <= FIELD_COL_END; j++)
         {
             get_cell (worksheet, i, j, cell, sizeof(cell));
 
@@ -985,7 +993,7 @@ preprocess_relation_graph (sheet *worksheet,
                 row->availability++;
 
                 /* Search in the same column to find matching count */
-                for (k = FILED_ROW_START; k < worksheet->rows-1; k++)
+                for (k = FIELD_ROW_START; k < worksheet->rows-1; k++)
                 {
                     get_cell (worksheet, k, j, cell, sizeof(cell));
 
