@@ -12,10 +12,10 @@
 #define  MAX_MEMBERS_LEN  64 
 
 /* Boundaries for the sheet that containing real data */
-#define  FILED_COL_NAME   0 
-#define  FILED_ROW_START  1
-#define  FILED_COL_START  2 
-#define  FILED_COL_END    16
+#define  FIELD_COL_NAME   0 
+#define  FIELD_ROW_START  1
+#define  FIELD_COL_START  2 
+#define  FIELD_COL_END    16
 
 /********************************  Types aliasess  ************************************/
 

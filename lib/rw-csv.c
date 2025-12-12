@@ -60,7 +60,12 @@ read_csv (const char *path)
 
         for (int j = 0; j < sheet.cols; ++j)
         {
-            sheet.data[i][j] = get_token(file, buffer, sizeof(buffer));
+            get_token(file, buffer, sizeof(buffer));
+            if (*buffer == '\0')
+            {
+                strncpy(buffer, " -- ", 5);
+            }
+            sheet.data[i][j] = strdup(buffer);
         }
     }
 
@@ -112,36 +117,60 @@ shuffle_worksheet (sheet_t *sheet,
 }
 
 char *
-get_token (FILE *stream,
-           char *buffer,
-           size_t buffer_size)
+get_token (FILE *stream, char *buffer, size_t buffer_size)
 {
-    int i = 0;
     int ch;
+    size_t i = 0;
 
-    while ((ch = fgetc(stream)) != ',' && ch != '\n' && ch != EOF)
-    {
-        if (i < buffer_size - 1)
-        {
-            buffer[i++] = ch;
+    while ((ch = fgetc(stream)) != EOF && ch != ',' && ch != '\n') {
+        if (i < buffer_size - 1) {
+            buffer[i++] = (char)ch;
+        } else {
+            fprintf(stderr, "Warning: token truncated to %zu chars\n", buffer_size - 1);
+            break;
         }
     }
     buffer[i] = '\0';
 
-    if (i == 0)
-    {
+    // If EOF and no other char is read, end!
+    if (i == 0 && ch == EOF) {
         return NULL;
     }
 
-    char *token = strdup(buffer);
-    if (!token)
-    {
-        perror("Failed to allocate token");
-        exit(EXIT_FAILURE);
-    }
-
-    return token;
+    return buffer;
 }
+
+/*char **/
+/*get_token (FILE *stream,*/
+/*           char *buffer,*/
+/*           size_t buffer_size)*/
+/*{*/
+/*    int i = 0;*/
+/*    int ch;*/
+/**/
+/*    while ((ch = fgetc(stream)) != ',' && ch != '\n' && ch != EOF)*/
+/*    {*/
+/*        if (i < buffer_size - 1)*/
+/*        {*/
+/*            buffer[i++] = ch;*/
+/*        }*/
+/*    }*/
+/*    buffer[i] = '\0';*/
+/**/
+/*    if (i == 0)*/
+/*    {*/
+/*        return NULL;*/
+/*    }*/
+/**/
+/*    char *token = strdup(buffer);*/
+/*    if (!token)*/
+/*    {*/
+/*        perror("Failed to allocate token");*/
+/*        exit(EXIT_FAILURE);*/
+/*    }*/
+/**/
+/*    return token;*/
+/*}*/
 
 /* Get the number of rows in the file */
 int
