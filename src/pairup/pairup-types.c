@@ -127,6 +127,7 @@ pairup_options_init (struct pairup_options *x)
     x->generate_graph = false;
     x->ensure = false;
     x->ensure_member_list = NULL;
+    x->couple = false;
     x->priority = false;
     x->debug_level = 2;
     x->json_output = false;

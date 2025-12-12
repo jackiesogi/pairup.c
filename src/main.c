@@ -66,7 +66,7 @@ has_installed_graphviz ()
     return false;
 }
 
-static char const short_options[] = "d:sg::e:jp:vh";
+static char const short_options[] = "d:sg::e:jp:vhc";
 
 static struct option const long_options[] =
 {
@@ -76,6 +76,7 @@ static struct option const long_options[] =
     {"ensure", required_argument, NULL, 'e'},
     {"json-output", no_argument, NULL, 'j'},
     {"debug", required_argument, NULL, 'd'},
+    {"couple", no_argument, NULL, 'c'},
     {"version", no_argument, NULL, 'v'},
     {"help", no_argument, NULL, 'h'},
     {NULL, 0, NULL, 0}
@@ -146,6 +147,9 @@ parse_debug_level (const char *str)
     }
 }
 
+#define CP_MAX_TRIES 1000
+#define CP_TARGET_FILE "cp.txt"  // file format: member_a,member_b(EOF)
+
 int
 main (int argc, char *argv[])
 {
@@ -196,6 +200,9 @@ main (int argc, char *argv[])
                 x.priority = true;
                 strncpy(x.priority_func, optarg, 1024);
                 break;
+            case 'c':
+                x.couple = true;
+                break;
             case 'v':
                 printf ("%s\n", PROGRAM_VERSION);
                 return 0;
@@ -245,7 +252,52 @@ main (int argc, char *argv[])
 
     /* Trigger the top-level pairup function */
     debug_printf(DEBUG_INFO, "[ INFO    ] Starting the pairing up process ...\n");
-    pair_result_t *result = __pairup__ (&worksheet, &x);
+
+    pair_result_t *result;
+
+pair_start:
+    ;
+    if (x.couple == false)
+    {
+        result = __pairup__(&worksheet, &x);
+    }
+    else
+    {
+        debug_printf(DEBUG_SUMMARY, "[ SUMMARY ] Couple mode enabled, using cp file %s\n", CP_TARGET_FILE);
+        char a[MAX_NAME_LEN];
+        char b[MAX_NAME_LEN];
+        FILE *cp_file = fopen(CP_TARGET_FILE, "r");
+        if (!cp_file)
+        {
+            x.couple = false;
+            goto pair_start;
+        }
+        // read a and b
+        if (fscanf(cp_file, "%[^,],%s", a, b) != 2)
+        {
+            fclose(cp_file);
+            x.couple = false;
+            goto pair_start;
+        }
+        fclose(cp_file);
+        bool cp_found = false;
+        int cp_attempts = 0;
+
+        while (!cp_found && cp_attempts < CP_MAX_TRIES)
+        {
+            result = __pairup__(&worksheet, &x);
+            cp_attempts++;
+            for (size_t i = 0; i < result->pairs; i++)
+            {
+                if ((strcmp(result->pair_list[i]->a->name, a) == 0 && strcmp(result->pair_list[i]->b->name, b) == 0) ||
+                    (strcmp(result->pair_list[i]->a->name, b) == 0 && strcmp(result->pair_list[i]->b->name, a) == 0))
+                {
+                    cp_found = true;
+                    break;
+                }
+            }
+        }
+    }
 
     /* Print the result */
     if (x.json_output == true)

@@ -138,6 +138,7 @@ struct pairup_options
     bool generate_graph;
     char graph_output[1024];
     bool ensure;
+    bool couple;
     udel *ensure_member_list;
     bool priority;
     char priority_func[1024];
