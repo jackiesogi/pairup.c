@@ -192,6 +192,148 @@ pairup_with_priority (graph *today,
 
 /*******************  INTERNAL FUNCTIONS DECLARATION (END)  ***********************/
 
+static void
+append_range_string (sheet_t *worksheet,
+                      int start_col,
+                      int end_col,
+                      char *out,
+                      size_t out_size)
+{
+    /* Merge consecutive 30-min slots into one string like 1900~2400 */
+    char *start_label = get_time_slot (worksheet, start_col);
+    char *end_label = get_time_slot (worksheet, end_col);
+
+    const char *start_time = start_label ? start_label : "";
+    const char *end_time = end_label ? end_label : "";
+
+    /* Extract left of '~' from start_label and right of '~' from end_label */
+    char left[16] = {0};
+    char right[16] = {0};
+
+    if (start_time && *start_time)
+    {
+        const char *p = strchr (start_time, '~');
+        size_t n = (p ? (size_t)(p - start_time) : strlen(start_time));
+        if (n >= sizeof(left)) n = sizeof(left) - 1;
+        memcpy (left, start_time, n);
+        left[n] = '\0';
+    }
+
+    if (end_time && *end_time)
+    {
+        const char *p = strchr (end_time, '~');
+        if (p && *(p+1))
+        {
+            strncpy (right, p + 1, sizeof(right) - 1);
+            right[sizeof(right) - 1] = '\0';
+        }
+        else
+        {
+            strncpy (right, end_time, sizeof(right) - 1);
+            right[sizeof(right) - 1] = '\0';
+        }
+    }
+
+    if (left[0] && right[0])
+    {
+        snprintf (out, out_size, "%s~%s", left, right);
+    }
+    else if (start_label && end_label)
+    {
+        /* Fallback: join full labels if parsing failed */
+        snprintf (out, out_size, "%s~%s", start_label, end_label);
+    }
+    else
+    {
+        *out = '\0';
+    }
+}
+
+static void
+collect_available_ranges (sheet_t *worksheet,
+                           int row,
+                           char ranges[][32],
+                           int *range_count)
+{
+    /* Scan availability columns and coalesce consecutive slots */
+    char cell[8];
+    int current_start = -1;
+    int last_col = -1;
+    int out_count = 0;
+
+    for (int j = FIELD_COL_START; j <= FIELD_COL_END; j++)
+    {
+        get_cell (worksheet, row, j, cell, sizeof(cell));
+        int available = is_available (cell);
+
+        if (available)
+        {
+            if (current_start == -1)
+            {
+                current_start = j;
+                last_col = j;
+            }
+            else if (j == last_col + 1)
+            {
+                last_col = j;
+            }
+            else
+            {
+                if (out_count < 64)
+                {
+                    append_range_string (worksheet, current_start, last_col, ranges[out_count], sizeof(ranges[out_count]));
+                    out_count++;
+                }
+                current_start = j;
+                last_col = j;
+            }
+        }
+    }
+
+    if (current_start != -1 && out_count < 64)
+    {
+        append_range_string (worksheet, current_start, last_col, ranges[out_count], sizeof(ranges[out_count]));
+        out_count++;
+    }
+
+    *range_count = out_count;
+}
+/*
+ * TODO: This will be merged into `pairup_bfs()` after making variable
+ * `worksheet` globally accessible, since right now worksheet is passed
+ * as a parameter everywhere and changing it will still need some effort
+ * to check and make the code and API unstable as fuck. As a result, this
+ * is a workaround for solving those function that needs `worksheet` but
+ * actually we didn't provide.
+ */
+static void
+pairup_bfs_EXT_time_suggestion (sheet *worksheet,
+                                pair_result *result)
+{
+    if (result->singles != 0)
+    {
+
+        for (int i = 0; i < result->singles; i++)
+        {
+            member_t *member = result->single_list[i];
+            char ranges[64][32];
+            int n_ranges = 0;
+            collect_available_ranges(worksheet, member->id, ranges, &n_ranges);
+
+            char time_suggestion_str[256];
+            int offset = 0;
+
+            // Print ranges
+            for (int k = 0; k < n_ranges; k++)
+            {
+                offset += snprintf(time_suggestion_str + offset, sizeof(time_suggestion_str) - offset, "%s%s",
+                                   ranges[k], (k == n_ranges - 1) ? "" : ", ");
+            }
+            strcpy(result->single_suggestion_time[i], time_suggestion_str);
+        }
+    }
+}
+
 /***************************  TOP LEVEL API (START)  ******************************/
 
 /* The top-level pairup function */
@@ -330,6 +472,9 @@ temp->algorithm_applied->name,
 
     free_relation_graph (graph);
 
+    // TODO: Make `worksheet` a global variable so that no garbage control flow like this will exist :(
+    pairup_bfs_EXT_time_suggestion(worksheet, best);
+
     return best;
 }
 
@@ -378,7 +523,7 @@ get_member_availability (sheet *worksheet,
     int j, count = 0;
     char cell[8];
 
-    for (j = FILED_COL_START; j <= FILED_COL_END; j++)
+    for (j = FIELD_COL_START; j <= FIELD_COL_END; j++)
     {
         get_cell (worksheet, id, j, cell, sizeof(cell));
         if (is_available(cell))
@@ -397,7 +542,7 @@ get_member_earliest_slot (sheet *worksheet,
     int j;
     char cell[8];
 
-    for (j = FILED_COL_START; j <= FILED_COL_END; j++)
+    for (j = FIELD_COL_START; j <= FIELD_COL_END; j++)
     {
         get_cell (worksheet, id, j, cell, sizeof(cell));
         if (is_available(cell))
@@ -416,7 +561,7 @@ get_member_requests (sheet *worksheet,
     int j;
     char cell[8];
 
-    for (j = FILED_COL_START; j <= FILED_COL_END; j++)
+    for (j = FIELD_COL_START; j <= FIELD_COL_END; j++)
     {
         get_cell (worksheet, id, j, cell, sizeof(cell));
         if (is_once(cell))
@@ -438,11 +583,11 @@ get_member_name (sheet *worksheet,
 {
     if (!worksheet || !worksheet->data ||
         !worksheet->data[id] ||
-        !worksheet->data[id][FILED_COL_NAME])
+        !worksheet->data[id][FIELD_COL_NAME])
     {
         return NULL;
     }
-    return worksheet->data[id][FILED_COL_NAME];
+    return worksheet->data[id][FIELD_COL_NAME];
 }
 
 /* New feature under development */
@@ -450,9 +595,9 @@ static int
 get_row_id_by_name (sheet *worksheet,
                     const char *name)
 {
-    for (int i = FILED_ROW_START; i < worksheet->rows; i++)
+    for (int i = FIELD_ROW_START; i < worksheet->rows; i++)
     {
-        if (strcmp(name, worksheet->data[i][FILED_COL_NAME]) == 0)
+        if (strcmp(name, worksheet->data[i][FIELD_COL_NAME]) == 0)
         {
             return i;
         }
@@ -510,7 +655,7 @@ preprocess_fixed_memblist (sheet *worksheet,
 
     debug_printf(DEBUG_INFO, "[ INFO    ] Generating fixed member list ...\n");
 
-    for (i = FILED_ROW_START; i < worksheet->rows - 1; i++)
+    for (i = FIELD_ROW_START; i < worksheet->rows - 1; i++)
     {
         member *member = new_member ();
 
@@ -559,7 +704,7 @@ member->ensure_score);
 
 //     printf("[DEBUG   ] worksheet->rows=%d, worksheet->cols=%d\n", worksheet->rows, worksheet->cols);
 
-//     for (i = FILED_ROW_START; i < worksheet->rows - 1; i++)
+//     for (i = FIELD_ROW_START; i < worksheet->rows - 1; i++)
 //     {
 //         printf("[DEBUG   ] Processing row %d...\n", i);
 
@@ -817,13 +962,13 @@ preprocess_relation_graph (sheet *worksheet,
     today->count = 0;
 
     /* Scan each row (members' name) */
-    for (i = FILED_ROW_START; i < worksheet->rows-1; i++)
+    for (i = FIELD_ROW_START; i < worksheet->rows-1; i++)
     {
         first = true;
         relation *row = NULL;
 
         /* Scan each column (time slots) */
-        for (j = FILED_COL_START; j <= FILED_COL_END; j++)
+        for (j = FIELD_COL_START; j <= FIELD_COL_END; j++)
         {
             get_cell (worksheet, i, j, cell, sizeof(cell));
 
@@ -848,7 +993,7 @@ preprocess_relation_graph (sheet *worksheet,
                 row->availability++;
 
                 /* Search in the same column to find matching count */
-                for (k = FILED_ROW_START; k < worksheet->rows-1; k++)
+                for (k = FIELD_ROW_START; k < worksheet->rows-1; k++)
                 {
                     get_cell (worksheet, k, j, cell, sizeof(cell));
 
@@ -976,9 +1121,9 @@ pairup_bfs (graph *today,
         {
             int bi = find_member_id (today, row->candidates[j]);
 
-            if (remain[bi] <= 0 || 
-                !has_time_slot(available_slot, i, matched_slot[i][j]) ||
-                !has_time_slot(available_slot, bi, matched_slot[i][j]) ||
+            if (remain[bi] <= 0 ||   // B no longer need partner
+                !has_time_slot(available_slot, i, matched_slot[i][j]) ||   // booked by other member
+                !has_time_slot(available_slot, bi, matched_slot[i][j]) ||  // booked by other member
                 !row->candidates[j])
             {
                 continue;
@@ -986,12 +1131,12 @@ pairup_bfs (graph *today,
 
             b = row->candidates[j];
 
-            if (result_existed(result, b, a))
+            if (result_existed(result, b, a))  // "A-B" and "B-A" are the same
             {
                 continue;
             }
 
-            if (a && b)
+            if (a && b)  // A and B matched !
             {
                 remain[i]--;
                 remain[bi]--;

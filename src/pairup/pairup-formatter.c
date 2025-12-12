@@ -11,6 +11,11 @@
 #include <string.h>
 #include <locale.h>
 
+/*
+ * TODO: Be able to retrieve single member's time suggestion from `result` object
+ * because right now the following two function are just duplicated logic from
+ * `pairup-algorithm.c`, which is really bad!
+ */
 static void
 append_range_string (sheet_t *worksheet,
                       int start_col,
@@ -80,7 +85,7 @@ collect_available_ranges (sheet_t *worksheet,
     int last_col = -1;
     int out_count = 0;
 
-    for (int j = FILED_COL_START; j <= FILED_COL_END; j++)
+    for (int j = FIELD_COL_START; j <= FIELD_COL_END; j++)
     {
         get_cell (worksheet, row, j, cell, sizeof(cell));
         int available = is_available (cell);
@@ -210,8 +215,8 @@ print_worksheet (sheet *worksheet)
         for (int j = 0; j < worksheet->cols; j++)
         {
             char *cell = worksheet->data[i][j];
-            int is_special_col = (j == FILED_COL_NAME || j == FILED_COL_END + 1);
-            int is_field_col = (j >= FILED_COL_START && j <= FILED_COL_END && i >= FILED_ROW_START);
+            int is_special_col = (j == FIELD_COL_NAME || j == FIELD_COL_END + 1);
+            int is_field_col = (j >= FIELD_COL_START && j <= FIELD_COL_END && i >= FIELD_ROW_START);
 
             if (is_field_col)
             {
@@ -472,23 +477,7 @@ print_result (sheet *worksheet,
         for (int i = 0; i < result->singles; i++)
         {
             member_t *member = result->single_list[i];
-            char ranges[64][32];
-            int n_ranges = 0;
-            collect_available_ranges (worksheet, member->id, ranges, &n_ranges);
-
-            if (n_ranges == 0)
-            {
-                printf ("@%s\n", member->name);
-            }
-            else
-            {
-                printf ("@%s (", member->name);
-                for (int k = 0; k < n_ranges; k++)
-                {
-                    printf ("%s%s", ranges[k], (k == n_ranges - 1) ? "" : ", ");
-                }
-                printf (")\n");
-            }
+            printf("@%s (%s)\n", member->name, result->single_suggestion_time[i]);
         }
     }
 
