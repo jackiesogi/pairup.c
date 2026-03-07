@@ -1,5 +1,8 @@
 # pairup.c
-This program provides a solution to help members in English study group to pair up with each other more efficiently by implementing several algorithms to prioritize the pairing order.
+
+`pairup` is a command-line tool that finds **optimal pairing results** for English study group by testing multiple prioritization strategies. (first row on sheet, earliest availability, most partners, etc.)
+
+For more information about the prioritization strategies, see [here](https://github.com/jackiesogi/pairup.c/blob/master/src/pairup/pairup-algorithm.c#L21-L69).
 
 ![Thumbnail](./img/thumbnail.png)
 
@@ -42,7 +45,7 @@ cd pairup.c
 ./pairup --help
 ```
 
-### Windows 10
+### Windows 10/11
 
 - Install `Visual Studio`, `cmake`, `git`
 
