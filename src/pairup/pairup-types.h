@@ -14,8 +14,13 @@
 /* Boundaries for the sheet that containing real data */
 #define  FIELD_COL_NAME   0 
 #define  FIELD_ROW_START  1
-#define  FIELD_COL_START  2 
+#define  FIELD_COL_START  2
 #define  FIELD_COL_END    16
+#define  FIELD_COL_FLEX   17
+#define  FIELD_COL_END_LEGACY   16
+
+/* Sentinel value for a flex-time pair (no fixed time slot) */
+#define  FLEX_SLOT        (-1)
 
 /********************************  Types aliasess  ************************************/
 
@@ -142,6 +147,7 @@ struct pairup_options
     bool priority;
     char priority_func[1024];
     int  debug_level;
+    bool enable_flex;
 };
 
 /********************************  Number of practices  *********************************/

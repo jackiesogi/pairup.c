@@ -464,7 +464,9 @@ print_result (sheet *worksheet,
         for (int i = 0; i < result->pairs; i++)
         {
             pair_t *pair = result->pair_list[i];
-            char *time = get_time_slot (worksheet, pair->time);
+            const char *time = (pair->time == FLEX_SLOT)
+                ? "flex"
+                : get_time_slot (worksheet, pair->time);
             printf ("@%s -- @%s (%s)\n", pair->a->name, pair->b->name, time);
         }
     }
@@ -652,7 +654,8 @@ cJSON *init_result_json_object (sheet_t *workseet,
     {
         pair_t *current = r->pair_list[i];
         cJSON *new_pair = cJSON_CreateObject ();
-        cJSON_AddStringToObject (new_pair, "matched_time", get_time_slot(workseet, current->time));
+        cJSON_AddStringToObject (new_pair, "matched_time",
+            current->time == FLEX_SLOT ? "flex" : get_time_slot(workseet, current->time));
         cJSON_AddStringToObject (new_pair, "member_a", current->a->name);
         cJSON_AddStringToObject (new_pair, "member_b", current->b->name);
         cJSON_AddItemToArray (result_paired_array, new_pair);

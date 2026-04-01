@@ -334,6 +334,65 @@ pairup_bfs_EXT_time_suggestion (sheet *worksheet,
     }
 }
 
+/*
+ * Pair up members who have filled in the FIELD_COL_FLEX column.
+ * These members have uncertain availability but still want to practice,
+ * so we greedily pair them two-by-two and mark the pair with FLEX_SLOT.
+ */
+static void
+pairup_flex_pairs (sheet_t *worksheet,
+                   pair_result *result,
+                   member *mlist[])
+{
+    member *flex_members[MAX_MEMBERS_LEN];
+    int flex_count = 0;
+    char cell[8];
+
+    /* Collect all members who filled the flex column */
+    for (int i = FIELD_ROW_START; i < worksheet->rows - 1; i++)
+    {
+        if (!mlist[i]) continue;
+        get_cell (worksheet, i, FIELD_COL_FLEX, cell, sizeof(cell));
+        if (is_available (cell))
+        {
+            flex_members[flex_count++] = mlist[i];
+        }
+    }
+
+    debug_printf (DEBUG_INFO, "[ INFO    ] Found %d member(s) with flex availability.\n", flex_count);
+
+    /* Pair them up two-by-two */
+    for (int i = 0; i + 1 < flex_count; i += 2)
+    {
+        if (result->pairs >= MAX_MATCHES_LEN) break;
+        pair *p = new_pair ();
+        if (!p) continue;
+        p->a = flex_members[i];
+        p->b = flex_members[i + 1];
+        p->time = FLEX_SLOT;
+        result->pair_list[result->pairs++] = p;
+    }
+
+    /* If there is an odd member left, add them to singles if not already there */
+    if (flex_count % 2 == 1 && result->singles < MAX_MATCHES_LEN)
+    {
+        member *odd = flex_members[flex_count - 1];
+        bool already_single = false;
+        for (int i = 0; i < result->singles; i++)
+        {
+            if (result->single_list[i] == odd)
+            {
+                already_single = true;
+                break;
+            }
+        }
+        if (!already_single)
+        {
+            result->single_list[result->singles++] = odd;
+        }
+    }
+}
+
 /***************************  TOP LEVEL API (START)  ******************************/
 
 /* The top-level pairup function */
@@ -474,6 +533,30 @@ temp->algorithm_applied->name,
 
     // TODO: Make `worksheet` a global variable so that no garbage control flow like this will exist :(
     pairup_bfs_EXT_time_suggestion(worksheet, best);
+
+    if (x->enable_flex)
+    {
+        debug_printf (DEBUG_INFO, "[ INFO    ] Applying flex pairing ...\n");
+        pairup_flex_pairs (worksheet, best, member_list);
+
+        /* For singles who only filled the flex column, their suggestion time
+         * will be empty (no regular slots found by pairup_bfs_EXT_time_suggestion).
+         * Show "????-????" to indicate their availability is flexible/unknown. */
+        char flex_cell[8];
+        for (int i = 0; i < best->singles; i++)
+        {
+            if (best->single_suggestion_time[i][0] == '\0')
+            {
+                member_t *m = best->single_list[i];
+                get_cell (worksheet, m->id, FIELD_COL_FLEX, flex_cell, sizeof(flex_cell));
+                if (is_available (flex_cell))
+                {
+                    strncpy (best->single_suggestion_time[i], "????~????",
+                             sizeof(best->single_suggestion_time[i]) - 1);
+                }
+            }
+        }
+    }
 
     return best;
 }
@@ -968,7 +1051,8 @@ preprocess_relation_graph (sheet *worksheet,
         relation *row = NULL;
 
         /* Scan each column (time slots) */
-        for (j = FIELD_COL_START; j <= FIELD_COL_END; j++)
+        // for (j = FIELD_COL_START; j <= FIELD_COL_END; j++)
+        for (j = FIELD_COL_START; j <= FIELD_COL_FLEX; j++)
         {
             get_cell (worksheet, i, j, cell, sizeof(cell));
 

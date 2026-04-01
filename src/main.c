@@ -42,6 +42,7 @@ Options:\n\
   -g, --graph={OUTPUT}        generate the relation graph\n\
   -e, --ensure={MEMBER}       ensure specified member can have partner today\n\
   -j, --json-output           print structural output(JSON)\n\
+  -F, --enable-flex           pair up members who filled the flex time column\n\
   -d, --debug={LEVEL}         set the debug level (0: only error, 5: all info)\n\
   -p, --priority={FUNC}       specify the match priority algorithm\n\
   -v, --version               print the version information\n\
@@ -66,7 +67,7 @@ has_installed_graphviz ()
     return false;
 }
 
-static char const short_options[] = "d:sg::e:jp:vh";
+static char const short_options[] = "d:sg::e:jp:vhF";
 
 static struct option const long_options[] =
 {
@@ -75,6 +76,7 @@ static struct option const long_options[] =
     {"priority", required_argument, NULL, 'p'},
     {"ensure", required_argument, NULL, 'e'},
     {"json-output", no_argument, NULL, 'j'},
+    {"enable-flex", no_argument, NULL, 'F'},
     {"debug", required_argument, NULL, 'd'},
     {"version", no_argument, NULL, 'v'},
     {"help", no_argument, NULL, 'h'},
@@ -191,6 +193,9 @@ main (int argc, char *argv[])
                 break;
             case 'j':
                 x.json_output = true;
+                break;
+            case 'F':
+                x.enable_flex = true;
                 break;
             case 'p':
                 x.priority = true;

@@ -130,6 +130,7 @@ pairup_options_init (struct pairup_options *x)
     x->priority = false;
     x->debug_level = 2;
     x->json_output = false;
+    x->enable_flex = false;
 }
 
 member_t *
