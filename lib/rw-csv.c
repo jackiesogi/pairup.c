@@ -101,15 +101,17 @@ write_csv (sheet_t *sheet,
     return 0;
 }
 
-/* Indices are specific to `pairup` */
+/* Indices are specific to `pairup`: shuffle member rows 1 .. rows-2, keeping */
+/* the header (first row) and the summary (last row) in place.               */
 void
 shuffle_worksheet (sheet_t *sheet,
                    uint32_t seed)
 {
     srand(seed);
-    for (int i = 1; i < sheet->rows - 1; ++i)
+    /* Fisher-Yates over rows [1, rows-2] */
+    for (int i = sheet->rows - 2; i > 1; --i)
     {
-        int j = (rand() % (sheet->rows - 2)) + 1;
+        int j = 1 + rand() % i;
         char **temp = sheet->data[i];
         sheet->data[i] = sheet->data[j];
         sheet->data[j] = temp;
@@ -178,16 +180,17 @@ get_rcount (FILE *file)
 {
     int count = 0;
     int ch;
-    int has_content = 0;
+    int last = '\n';
 
     while ((ch = fgetc(file)) != EOF) {
-        has_content = 1;
         if (ch == '\n') {
             count++;
         }
+        last = ch;
     }
 
-    if (has_content && ch != '\n') {
+    /* Count a final line that has no trailing newline */
+    if (last != '\n') {
         count++;
     }
 
@@ -291,9 +294,10 @@ get_cell (sheet_t *sheet,
           char *buf,
           int buf_size)
 {
-    if (row <= 0 || row > sheet->rows || col <= 0 || col > sheet->cols)
+    if (row < 0 || row >= sheet->rows || col < 0 || col >= sheet->cols)
     {
         fprintf(stderr, "Invalid cell position\n");
+        if (buf_size > 0) *buf = '\0';
         return;
     }
 
