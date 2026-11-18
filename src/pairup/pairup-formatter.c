@@ -1,127 +1,16 @@
+#include <locale.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "pairup-formatter.h"
-#include "pairup-types.h"
-#include "pairup-algorithm.h"
-#include "rw-csv.h"
-#include "cJSON.h"
+#include "pairup-problem.h"
 #include "portable_wcwidth.h"
 
-#include <stdio.h>
-#include <string.h>
-#include <locale.h>
+#define FLEX_ONLY_SUGGESTION "????~????"
 
-/*
- * TODO: Be able to retrieve single member's time suggestion from `result` object
- * because right now the following two function are just duplicated logic from
- * `pairup-algorithm.c`, which is really bad!
- */
-static void
-append_range_string (sheet_t *worksheet,
-                      int start_col,
-                      int end_col,
-                      char *out,
-                      size_t out_size)
-{
-    /* Merge consecutive 30-min slots into one string like 1900~2400 */
-    char *start_label = get_time_slot (worksheet, start_col);
-    char *end_label = get_time_slot (worksheet, end_col);
-
-    const char *start_time = start_label ? start_label : "";
-    const char *end_time = end_label ? end_label : "";
-
-    /* Extract left of '~' from start_label and right of '~' from end_label */
-    char left[16] = {0};
-    char right[16] = {0};
-
-    if (start_time && *start_time)
-    {
-        const char *p = strchr (start_time, '~');
-        size_t n = (p ? (size_t)(p - start_time) : strlen(start_time));
-        if (n >= sizeof(left)) n = sizeof(left) - 1;
-        memcpy (left, start_time, n);
-        left[n] = '\0';
-    }
-
-    if (end_time && *end_time)
-    {
-        const char *p = strchr (end_time, '~');
-        if (p && *(p+1))
-        {
-            strncpy (right, p + 1, sizeof(right) - 1);
-            right[sizeof(right) - 1] = '\0';
-        }
-        else
-        {
-            strncpy (right, end_time, sizeof(right) - 1);
-            right[sizeof(right) - 1] = '\0';
-        }
-    }
-
-    if (left[0] && right[0])
-    {
-        snprintf (out, out_size, "%s~%s", left, right);
-    }
-    else if (start_label && end_label)
-    {
-        /* Fallback: join full labels if parsing failed */
-        snprintf (out, out_size, "%s~%s", start_label, end_label);
-    }
-    else
-    {
-        *out = '\0';
-    }
-}
-
-static void
-collect_available_ranges (sheet_t *worksheet,
-                           int row,
-                           char ranges[][32],
-                           int *range_count)
-{
-    /* Scan availability columns and coalesce consecutive slots */
-    char cell[8];
-    int current_start = -1;
-    int last_col = -1;
-    int out_count = 0;
-
-    for (int j = FIELD_COL_START; j <= FIELD_COL_END; j++)
-    {
-        get_cell (worksheet, row, j, cell, sizeof(cell));
-        int available = is_available (cell);
-
-        if (available)
-        {
-            if (current_start == -1)
-            {
-                current_start = j;
-                last_col = j;
-            }
-            else if (j == last_col + 1)
-            {
-                last_col = j;
-            }
-            else
-            {
-                if (out_count < 64)
-                {
-                    append_range_string (worksheet, current_start, last_col, ranges[out_count], sizeof(ranges[out_count]));
-                    out_count++;
-                }
-                current_start = j;
-                last_col = j;
-            }
-        }
-    }
-
-    if (current_start != -1 && out_count < 64)
-    {
-        append_range_string (worksheet, current_start, last_col, ranges[out_count], sizeof(ranges[out_count]));
-        out_count++;
-    }
-
-    *range_count = out_count;
-}
+/********************************  Worksheet  ****************************************/
 
 int
 get_display_width (const char *str)
@@ -232,7 +121,136 @@ print_worksheet (sheet *worksheet)
     }
 }
 
-int
+/*********************************  Result  ******************************************/
+
+/* "1900~2000, 2130~2200" for the chat message */
+static void
+format_suggestion (const pairup_problem *problem,
+                   int member,
+                   char *out,
+                   size_t size)
+{
+    char ranges[PAIRUP_MAX_SLOTS][PAIRUP_MAX_RANGE];
+    int n = pairup_member_ranges (problem, member, ranges, PAIRUP_MAX_SLOTS);
+    size_t used = 0;
+
+    out[0] = '\0';
+    for (int k = 0; k < n && used < size; k++)
+    {
+        int w = snprintf (out + used, size - used, "%s%s", k ? ", " : "", ranges[k]);
+        if (w < 0)
+            break;
+        used += (size_t) w;
+    }
+
+    /* Members who only filled in the flex column have no fixed time to suggest */
+    int flex = pairup_flex_slot (problem);
+    if (n == 0 && flex >= 0 && (problem->members[member].avail >> flex) & 1u)
+        snprintf (out, size, "%s", FLEX_ONLY_SUGGESTION);
+}
+
+void
+print_result (const pairup_result *result)
+{
+    const pairup_problem *p = &result->problem;
+
+    if (result->n_pairs == 0)
+    {
+        printf ("%s\n", NOPAIRS_SUGGESTION);
+    }
+    else
+    {
+        printf ("%s\n", GREETING);
+        for (int i = 0; i < result->n_pairs; i++)
+        {
+            const pairup_pair *pair = &result->pairs[i];
+            printf ("@%s -- @%s (%s)\n",
+                    p->members[pair->a].name,
+                    p->members[pair->b].name,
+                    p->slots[pair->slot].label);
+        }
+    }
+
+    printf ("\n");
+    printf ("As for\n");
+
+    for (int i = 0; i < result->n_singles; i++)
+    {
+        char suggestion[256];
+        format_suggestion (p, result->singles[i], suggestion, sizeof(suggestion));
+        printf ("@%s (%s)\n", p->members[result->singles[i]].name, suggestion);
+    }
+
+    printf ("%s\n", ALTERNATIVES_FOR_NOT_MATCHED);
+}
+
+cJSON *
+init_result_json_object (const pairup_result *r)
+{
+    const pairup_problem *p = &r->problem;
+
+    debug_printf (DEBUG_INFO, "Initializing a JSON object with pair result ...\n");
+    cJSON *root = cJSON_CreateObject ();
+    cJSON_AddNumberToObject (root, "exit_code", 0);
+    cJSON_AddStringToObject (root, "exit_msg",
+                             r->status == PAIRUP_OPTIMAL
+                                 ? "Completed without error"
+                                 : "Completed, but the solver hit its time limit so the result may not be optimal");
+    cJSON_AddStringToObject (root, "algorithm", PAIRUP_ALGORITHM_NAME);
+    cJSON_AddNumberToObject (root, "n_successful_req", r->n_pairs * 2);
+    cJSON_AddNumberToObject (root, "n_failed_req", r->n_singles);
+
+    debug_printf (DEBUG_INFO, "Creating JSON array and filling with paired members ...\n");
+    cJSON *paired = cJSON_CreateArray ();
+    for (int i = 0; i < r->n_pairs; ++i)
+    {
+        const pairup_pair *pair = &r->pairs[i];
+        cJSON *obj = cJSON_CreateObject ();
+        cJSON_AddStringToObject (obj, "matched_time", p->slots[pair->slot].label);
+        cJSON_AddStringToObject (obj, "member_a", p->members[pair->a].name);
+        cJSON_AddStringToObject (obj, "member_b", p->members[pair->b].name);
+        cJSON_AddItemToArray (paired, obj);
+    }
+
+    debug_printf (DEBUG_INFO, "Creating JSON array and filling with single members ...\n");
+    cJSON *singles = cJSON_CreateArray ();
+    for (int i = 0; i < r->n_singles; ++i)
+    {
+        int m = r->singles[i];
+        cJSON *obj = cJSON_CreateObject ();
+        cJSON_AddStringToObject (obj, "member", p->members[m].name);
+
+        char ranges[PAIRUP_MAX_SLOTS][PAIRUP_MAX_RANGE];
+        int n = pairup_member_ranges (p, m, ranges, PAIRUP_MAX_SLOTS);
+        cJSON *range_array = cJSON_CreateArray ();
+        for (int k = 0; k < n; k++)
+            cJSON_AddItemToArray (range_array, cJSON_CreateString (ranges[k]));
+
+        cJSON_AddItemToObject (obj, "available_ranges", range_array);
+        cJSON_AddItemToArray (singles, obj);
+    }
+
+    cJSON_AddItemToObject (root, "result_paired", paired);
+    cJSON_AddItemToObject (root, "result_single", singles);
+
+    return root;
+}
+
+void free_result_json_object (cJSON *root)
+{
+    if (root)
+        cJSON_Delete (root);
+}
+
+void free_result_json_string (char *str)
+{
+    if (str)
+        cJSON_free (str);
+}
+
+/******************************  Relation graph  *************************************/
+
+static int
 calculate_dpi (int line_count)
 {
     int base_dpi = 72;
@@ -245,7 +263,7 @@ calculate_dpi (int line_count)
     return base_dpi + (max_dpi - base_dpi) * line_count / threshold;
 }
 
-int
+static int
 count_lines (const char *filename)
 {
     FILE *file = fopen (filename, "r");
@@ -256,8 +274,8 @@ count_lines (const char *filename)
     }
 
     int lines = 0;
-    char ch;
-    while ((ch = fgetc(file)) != EOF)
+    int ch;
+    while ((ch = fgetc (file)) != EOF)
     {
         if (ch == '\n')
             lines++;
@@ -268,24 +286,20 @@ count_lines (const char *filename)
 }
 
 void
-generate_graph_output_image (sheet *worksheet,
+generate_graph_output_image (const pairup_problem *problem,
                              const char *filename)
 {
     char dotfile[1024];
-    strcpy (dotfile, filename);
-    strcat (dotfile, ".dot");
+    snprintf (dotfile, sizeof(dotfile), "%s.dot", filename);
 
-    print_graph_to_file (worksheet, dotfile);
+    print_graph_to_file (problem, dotfile);
 
-    int line_count = count_lines (dotfile);
-    int dpi = calculate_dpi (line_count);
+    int dpi = calculate_dpi (count_lines (dotfile));
 
-    char command[2048];
+    char command[2200];
     snprintf (command, sizeof(command), "dot -Tpng -Gdpi=%d %s -o %s", dpi, dotfile, filename);
 
-    int ret = system (command);
-
-    if (ret != 0)
+    if (system (command) != 0)
     {
         fprintf (stderr, "Error: failed to generate graph image\n");
         return;
@@ -293,11 +307,21 @@ generate_graph_output_image (sheet *worksheet,
     printf ("Graph image has been generated to %s\n", filename);
 }
 
+/* Lowest slot index set in `mask` */
+static int
+first_slot (uint32_t mask)
+{
+    int t = 0;
+    while (!((mask >> t) & 1u))
+        t++;
+    return t;
+}
+
 void
-print_graph_to_file (sheet *worksheet,
+print_graph_to_file (const pairup_problem *problem,
                      const char *filename)
 {
-    printf("Output: %s\n", filename);
+    printf ("Output: %s\n", filename);
     FILE *file = fopen (filename, "w");
     if (file == NULL)
     {
@@ -306,283 +330,97 @@ print_graph_to_file (sheet *worksheet,
     }
 
     fprintf (file, "graph G {\n");
-    fprintf (file,"    /* File attributes */\n");
-    fprintf (file,"    size=\"6,4\";\n    ratio=fill;\n");
-
-    relation_graph_t *graph = pairup_graph (worksheet);
-    if (graph == NULL)
-    {
-        fprintf (stderr, "Error: failed to generate graph\n");
-        fclose (file);
-        return;
-    }
+    fprintf (file, "    /* File attributes */\n");
+    fprintf (file, "    size=\"6,4\";\n    ratio=fill;\n");
 
     fprintf (file, "\n    /* Node attributes */\n");
-    for (size_t i = 0; i < graph->count; i++)
+    for (int i = 0; i < problem->n_members; i++)
     {
-        relation_t *relation = graph->relations[i];
-        member *member = relation->candidates[0];
-
-        fprintf (file, "    \"%s\" [label=\"%s: %zu\"];\n",
-                 member->name, member->name, member->requests);
+        const pairup_member *m = &problem->members[i];
+        fprintf (file, "    \"%s\" [label=\"%s: %d\"];\n", m->name, m->name, m->requests);
     }
 
+    /* One edge per pair of members, labelled with their earliest shared slot */
     fprintf (file, "\n    /* Edge relations */\n");
-
-    size_t edge_count = 0;
-    for (size_t i = 0; i < graph->count; i++)
+    for (int a = 0; a < problem->n_members; a++)
     {
-        relation_t *relation = graph->relations[i];
-        edge_count += (relation->count - 1);
-    }
-
-    typedef struct {
-        char *node1;
-        char *node2;
-        slot time;
-    } edge_t;
-
-    edge_t *printed_edges = (edge_t *) malloc (edge_count * sizeof(edge_t));
-    if (!printed_edges)
-    {
-        fprintf (stderr, "Error: failed to allocate memory for edges\n");
-        fclose (file);
-        return;
-    }
-
-    int printed_count = 0;
-
-    for (size_t i = 0; i < graph->count; i++)
-    {
-        relation_t *relation = graph->relations[i];
-        member *source = relation->candidates[0];
-
-        for (size_t j = 1; j < relation->count; j++)
+        for (int b = a + 1; b < problem->n_members; b++)
         {
-            member *target = relation->candidates[j];
-            slot time = relation->matched_slot[j];
-
-            int is_duplicate = 0;
-            for (int k = 0; k < printed_count; k++)
-            {
-                if ((strcmp(printed_edges[k].node1, source->name) == 0 &&
-                     strcmp(printed_edges[k].node2, target->name) == 0) ||
-                    (strcmp(printed_edges[k].node1, target->name) == 0 &&
-                     strcmp(printed_edges[k].node2, source->name) == 0))
-                {
-                    is_duplicate = 1;
-                    break;
-                }
-            }
-
-            if (!is_duplicate)
-            {
-                char *timestr = get_time_slot (worksheet, time);
-                fprintf (file, "    \"%s\" -- \"%s\" [label=\"%s\" fontsize=7];\n",
-                         source->name, target->name, timestr);
-
-                printed_edges[printed_count].node1 = source->name;
-                printed_edges[printed_count].node2 = target->name;
-                printed_edges[printed_count].time = time;
-                printed_count++;
-            }
+            uint32_t common = problem->members[a].avail & problem->members[b].avail;
+            if (!common)
+                continue;
+            fprintf (file, "    \"%s\" -- \"%s\" [label=\"%s\" fontsize=7];\n",
+                     problem->members[a].name, problem->members[b].name,
+                     problem->slots[first_slot (common)].label);
         }
     }
 
     fprintf (file, "}\n");
-
-    fclose (file);
-
-    free (printed_edges);
-
-    printf ("Graph has been written to %s\n", filename);
-
-    free_relation_graph (graph);
-}
-
-void
-print_digraph_to_file (sheet *worksheet,
-                       const char *filename)
-{
-    FILE *file = fopen (filename, "w");
-    if (file == NULL)
-    {
-        fprintf (stderr, "Error: cannot open file %s\n", filename);
-        return;
-    }
-
-    fprintf (file, "digraph G { \n  size=\"6,4\";\n  ratio=fill;\n");
-
-    relation_graph_t *graph = pairup_graph (worksheet);
-    if (graph == NULL)
-    {
-        fprintf (stderr, "Error: failed to generate graph\n");
-        fclose (file);
-        return;
-    }
-
-    int i, j;
-    for (i = 0; i < graph->count; i++)
-    {
-        relation_t *relation = graph->relations[i];
-
-        char *source = relation->candidates[0]->name;
-
-        if (relation->count == 1)
-        {
-            fprintf (file, "  \"%s\";\n", source);
-            continue;
-        }
-
-        for (j = 1; j < relation->count; j++)
-        {
-            char *target = relation->candidates[j]->name;
-            fprintf (file, "  \"%s\" -> \"%s\";\n", source, target);
-        }
-    }
-
-    fprintf (file, "}\n");
-
     fclose (file);
 
     printf ("Graph has been written to %s\n", filename);
-
-    free_relation_graph (graph);
 }
 
-void
-print_result (sheet *worksheet,
-              pair_result *result)
-{
-    if (result->pairs == 0)
-    {
-        printf ("%s\n", NOPAIRS_SUGGESTION);
-    }
-    else
-    {
-        printf ("%s\n", GREETING);
-        for (int i = 0; i < result->pairs; i++)
-        {
-            pair_t *pair = result->pair_list[i];
-            const char *time = (pair->time == FLEX_SLOT)
-                ? "flex"
-                : get_time_slot (worksheet, pair->time);
-            printf ("@%s -- @%s (%s)\n", pair->a->name, pair->b->name, time);
-        }
-    }
-
-    printf ("\n");
-    printf ("As for\n");
-
-    if (result->singles != 0)
-    {
-        for (int i = 0; i < result->singles; i++)
-        {
-            member_t *member = result->single_list[i];
-            printf("@%s (%s)\n", member->name, result->single_suggestion_time[i]);
-        }
-    }
-
-    printf ("%s\n", ALTERNATIVES_FOR_NOT_MATCHED);
-}
+/**********************************  Debug  ******************************************/
 
 void
-display_graph (void *context)
+display_graph (const pairup_problem *problem)
 {
-    relation_graph_t *graph = (relation_graph_t *)context;
-
-    for (int i = 0; i < graph->count; i++)
+    for (int a = 0; a < problem->n_members; a++)
     {
-        relation_t *row = graph->relations[i];
-        /*printf ("Relation %d: [ %s ] --> ", i, row->candidates[0]->name);*/
-        debug_printf (DEBUG_SUMMARY, "[ SUMMARY ]   Relation %d: [ %s ] --> ", i, row->candidates[0]->name);
-        for (int j = 1; j < row->count; j++)
+        debug_printf (DEBUG_SUMMARY, "[ SUMMARY ]   Relation %d: [ %s ] --> ", a, problem->members[a].name);
+        for (int t = 0; t < problem->n_slots; t++)
         {
-            int time = row->matched_slot[j];
-            /*printf ("%s(at %d) --> ", row->candidates[j]->name, time);*/
-            debug_printf (DEBUG_SUMMARY, "%s(at %d) --> ", row->candidates[j]->name, time);
+            for (int b = 0; b < problem->n_members; b++)
+            {
+                uint32_t common = problem->members[a].avail & problem->members[b].avail;
+                if (b != a && (common >> t) & 1u)
+                    debug_printf (DEBUG_SUMMARY, "%s(at %s) --> ", problem->members[b].name, problem->slots[t].label);
+            }
         }
-        printf ("\n");
+        debug_printf (DEBUG_SUMMARY, "\n");
     }
 }
 
 void
-display_summary (pair_result *result)
+display_summary (const pairup_result *result)
 {
-    size_t M = result->member;
-    size_t P = result->pairs;
-    /*size_t NP = result->singles;*/
-    size_t REQ = result->total_requests;
-    size_t SREQ = P << 1;
-    size_t NREQ = REQ - SREQ;
+    const pairup_problem *p = &result->problem;
+    int REQ = result->total_requests;
+    int SREQ = result->n_pairs * 2;
+    int NREQ = REQ - SREQ;
 
-    int RATIO_SREQ, RATIO_NREQ;
+    debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Members: %d\n", p->n_members);
+    debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Successful pairs: %d\n", result->n_pairs);
+    debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Total requests: %d\n", REQ);
+
     if (REQ == 0)
     {
-        RATIO_SREQ = -1;
-        RATIO_NREQ = -1;
+        debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Successful requests: %d\n", SREQ);
+        debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Failed requests: %d\n", NREQ);
     }
     else
     {
-        RATIO_SREQ = (SREQ * 100) / REQ;
-        RATIO_NREQ = (NREQ * 100) / REQ;
-    }
-
-    debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Members: %zu\n", M);
-    debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Successful pairs: %zu\n", P);
-    debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Total requests: %zu\n", REQ);
-
-    if (RATIO_SREQ == -1 || RATIO_NREQ == -1)
-    {
-        debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Successful requests: %zu\n", SREQ);
-        debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Failed requests: %zu\n", NREQ);
-    }
-    else
-    {
-        debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Successful requests: %zu (%d%%)\n", SREQ, RATIO_SREQ);
-        debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Failed requests: %zu (%d%%)\n", NREQ, RATIO_NREQ);
+        debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Successful requests: %d (%d%%)\n", SREQ, SREQ * 100 / REQ);
+        debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Failed requests: %d (%d%%)\n", NREQ, NREQ * 100 / REQ);
     }
 
     debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Pair list:\n");
-    for (int i = 0; i < result->pairs; i++)
+    for (int i = 0; i < result->n_pairs; i++)
     {
-        debug_printf (DEBUG_SUMMARY, "[ SUMMARY ]   %s -- %s\n", result->pair_list[i]->a->name, result->pair_list[i]->b->name);
+        debug_printf (DEBUG_SUMMARY, "[ SUMMARY ]   %s -- %s (%s)\n",
+                      p->members[result->pairs[i].a].name,
+                      p->members[result->pairs[i].b].name,
+                      p->slots[result->pairs[i].slot].label);
     }
     debug_printf (DEBUG_SUMMARY, "[ SUMMARY ] Single list:\n");
-    for (int i = 0; i < result->singles; i++)
+    for (int i = 0; i < result->n_singles; i++)
     {
-        debug_printf (DEBUG_SUMMARY, "[ SUMMARY ]   %s\n", result->single_list[i]->name);
+        debug_printf (DEBUG_SUMMARY, "[ SUMMARY ]   %s\n", p->members[result->singles[i]].name);
     }
 }
 
 int debug_level = DEBUG_NONE;
-
-/* Debug function */
-// void
-// do_if_debug_level_is_greater (int level,
-//                               callback fptr,
-//                               void *context,
-//                               const char *fmt, ...)
-// {
-//     if (level > debug_level)
-//     {
-//         return;
-//     }
-
-//     va_list args;
-//     va_start (args, fmt);
-//     va_end (args);
-
-//     if (fmt != NULL)
-//     {
-//         vprintf (fmt, args);
-//     }
-
-//     if (fptr != NULL)
-//     {
-//         fptr (context);
-//     }
-// }
 
 void
 do_if_debug_level_is_greater (int level,
@@ -598,117 +436,13 @@ do_if_debug_level_is_greater (int level,
     if (fmt != NULL)
     {
         va_list args;
-        va_start(args, fmt);
-        vprintf(fmt, args);
-        va_end(args);
+        va_start (args, fmt);
+        vprintf (fmt, args);
+        va_end (args);
     }
 
     if (fptr != NULL)
     {
-        fptr(context);
+        fptr (context);
     }
 }
-
-// cJSON *new_format_error_json_object ()
-// {
-//     cJSON *root = NULL;
-//     cJSON *result_paired_array = NULL;
-//     cJSON *result_single_array = NULL;
-
-//     debug_printf (DEBUG_INFO, "Initializing a JSON object with pair result ...\n");
-//     root = cJSON_CreateObject ();
-//     cJSON_AddNumberToObject (root, "exit_code", 1);
-//     cJSON_AddStringToObject (root, "exit_msg", "Invalid worksheet format");
-//     cJSON_AddStringToObject (root, "algorithm", "N/A");
-//     cJSON_AddNumberToObject (root, "n_successful_req", 0);
-//     cJSON_AddNumberToObject (root, "n_failed_req", 0);
-
-//     result_paired_array = cJSON_CreateArray ();
-//     result_single_array = cJSON_CreateArray ();
-
-//     cJSON_AddItemToObject (root, "result_paired", result_paired_array);
-//     cJSON_AddItemToObject (root, "result_single", result_single_array);
-
-//     return root;
-// }
-
-// init_result_json_object(void)
-cJSON *init_result_json_object (sheet_t *workseet,
-                                result_t *r)
-{
-    cJSON *root = NULL;
-    cJSON *result_paired_array = NULL;
-    cJSON *result_single_array = NULL;
-
-    debug_printf (DEBUG_INFO, "Initializing a JSON object with pair result ...\n");
-    root = cJSON_CreateObject ();
-    cJSON_AddNumberToObject (root, "exit_code", 0);
-    cJSON_AddStringToObject (root, "exit_msg", "Completed without error");
-    cJSON_AddStringToObject (root, "algorithm", r->algorithm_applied->name);
-    cJSON_AddNumberToObject (root, "n_successful_req", r->pairs * 2);
-    cJSON_AddNumberToObject (root, "n_failed_req", r->singles);
-
-    debug_printf (DEBUG_INFO, "Creating JSON array and filling with paired members ...\n");
-    result_paired_array = cJSON_CreateArray ();
-    for (int i = 0; i < r->pairs; ++i)
-    {
-        pair_t *current = r->pair_list[i];
-        cJSON *new_pair = cJSON_CreateObject ();
-        cJSON_AddStringToObject (new_pair, "matched_time",
-            current->time == FLEX_SLOT ? "flex" : get_time_slot(workseet, current->time));
-        cJSON_AddStringToObject (new_pair, "member_a", current->a->name);
-        cJSON_AddStringToObject (new_pair, "member_b", current->b->name);
-        cJSON_AddItemToArray (result_paired_array, new_pair);
-    }
-
-    debug_printf (DEBUG_INFO, "Creating JSON array and filling with single members ...\n");
-    result_single_array = cJSON_CreateArray ();
-    for (int i = 0; i < r->singles; ++i)
-    {
-        member_t *current = r->single_list[i];
-        cJSON *single_obj = cJSON_CreateObject ();
-        cJSON_AddStringToObject (single_obj, "member", current->name);
-
-        /* Build merged availability ranges for this single */
-        char ranges[64][32];
-        int n_ranges = 0;
-        collect_available_ranges (workseet, current->id, ranges, &n_ranges);
-
-        cJSON *range_array = cJSON_CreateArray ();
-        for (int k = 0; k < n_ranges; k++)
-        {
-            cJSON_AddItemToArray (range_array, cJSON_CreateString (ranges[k]));
-        }
-        cJSON_AddItemToObject (single_obj, "available_ranges", range_array);
-        cJSON_AddItemToArray (result_single_array, single_obj);
-    }
-
-    cJSON_AddItemToObject (root, "result_paired", result_paired_array);
-    cJSON_AddItemToObject (root, "result_single", result_single_array);
-
-    return root;
-}
-
-void free_result_json_object (cJSON *root)
-{
-    if (root) {
-        cJSON_Delete (root);
-    }
-}
-
-void free_result_json_string (char *str)
-{
-    if (str)
-    {
-        cJSON_free(str);
-    }
-}
-
-// set_result_exit_code (int)
-// set_result_exit_msg (const char)
-// set_result_n_sucessful_req (int)
-// set_result_n_failed_req (int)
-//
-// set_result_matched_array ()
-// set_result_single_array ()
-// get_result_json_string () == cJSON_Print()

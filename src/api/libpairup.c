@@ -1,37 +1,44 @@
 #include <stdio.h>
-#include <time.h>
-#include "pairup/pairup-algorithm.h"
-#include "pairup/pairup-formatter.h"
-#include "pairup/pairup-types.h"
-#include "rw-csv.h"
-#include "libpairup.h"
-#include "cJSON.h"
 
-/* Read CSV source data */
-sheet PairUP_Read(const char *path) {
-    return read_csv(path);
+#include "libpairup.h"
+
+sheet PairUP_Read (const char *path)
+{
+    return read_csv (path);
 }
 
-void PairUP_DefaultOption(options *opt) {
+void PairUP_DefaultOption (options *opt)
+{
     pairup_options_init (opt);
 }
 
-result *PairUP_Generate(sheet *worksheet, options *opt, uint32_t seed) {
-    if (opt == NULL)
-        PairUP_DefaultOption (opt);
+result *PairUP_Generate (sheet *worksheet, const options *opt, uint32_t seed)
+{
+    char err[256];
 
     if (seed != 0)
         shuffle_worksheet (worksheet, seed);
 
-    return __pairup__ (worksheet, opt);
+    result *r = pairup_run (worksheet, opt, err, sizeof(err));
+    if (!r)
+        debug_printf (DEBUG_ERROR, "[ ERROR   ] %s\n", err);
+    return r;
 }
 
-cJSON *PairUP_ConvertToJSON(sheet *worksheet, result *result) {
-    return init_result_json_object (worksheet, result);
+cJSON *PairUP_ConvertToJSON (const result *r)
+{
+    return init_result_json_object (r);
 }
 
-char *PairUP_ConvertToString(sheet *worksheet, result *result) {
-    cJSON *root = init_result_json_object(worksheet, result);
-    return get_result_json_string(root);
+char *PairUP_ConvertToString (const result *r)
+{
+    cJSON *root = init_result_json_object (r);
+    char *str = get_result_json_string (root);
+    free_result_json_object (root);
+    return str;
+}
 
+void PairUP_Free (result *r)
+{
+    pairup_result_free (r);
 }

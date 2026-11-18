@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <string.h>
 #include <time.h>
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -36,7 +37,7 @@ usage (int status)
     {
         printf ("\
 Usage: %s [OPTION]... SOURCE_CSV\n\
-Generate optimal matches based on member's available time with linear time complexity\n\n\
+Generate the maximum number of matches based on member's available time\n\n\
 Options:\n\
   -s, --show-csv              show the csv data only (no pair result)\n\
   -g, --graph={OUTPUT}        generate the relation graph\n\
@@ -44,17 +45,16 @@ Options:\n\
   -j, --json-output           print structural output(JSON)\n\
   -F, --enable-flex           pair up members who filled the flex time column\n\
   -d, --debug={LEVEL}         set the debug level (0: only error, 5: all info)\n\
-  -p, --priority={FUNC}       specify the match priority algorithm\n\
+  -p, --priority={FUNC}       (deprecated, ignored) the solver always finds the optimum\n\
   -v, --version               print the version information\n\
   -h, --help                  print this page\n\n\
 Examples:\n\
   %s '英文讀書會時間 Ver.4.csv'              # display the optimal matches\n\
   %s -s '英文讀書會時間 Ver.4.csv'           # show the csv data only\n\
   %s -g '英文讀書會時間 Ver.4.csv'           # generate 'relations.png' pairing graph\n\
-  %s -p LAST_ROW '英文讀書會時間 Ver.4.csv'  # match member from the last row\n\
   %s -e 'Bob' '英文讀書會時間 Ver.4.csv'     # match Bob first\n\n\
 For more information, see <https://github.com/jackiesogi/pairup.c>.\n\
-", program_name, program_name, program_name, program_name, program_name, program_name);
+", program_name, program_name, program_name, program_name, program_name);
     }
     exit (status);
 }
@@ -85,25 +85,13 @@ static struct option const long_options[] =
 
 void
 sigsegv_handler (int sig) {
+    (void) sig;
     fprintf (stdout, "The worksheet format is incorrect. Please check the content on Google Sheets with the following format rules, or contact the developer:\n\
 (1) No extra characters should appear outside the main table.\n\
 (2) There should be no empty rows between members.\n\
 (3) There should be no empty columns between the time slots.\n\
-(4) The number of members should not exceed 64. (If so, contact the developer to scale it up.)\n");
+(4) The number of members should not exceed %d. (If so, contact the developer to scale it up.)\n", PAIRUP_MAX_MEMBERS);
     exit(EXIT_FAILURE);
-}
-
-void
-append_user_defined_ensure_list (struct user_defined_ensure_list *list,
-                                 const char *src)
-{
-    if (list->ensure_list_size < MAX_MEMBERS_LEN) {
-        strncpy(list->ensure_list_content[list->ensure_list_size],
-                src,
-                MAX_NAME_LEN - 1);
-        list->ensure_list_content[list->ensure_list_size][MAX_NAME_LEN - 1] = '\0';
-        list->ensure_list_size++;
-    }
 }
 
 int
@@ -157,10 +145,8 @@ main (int argc, char *argv[])
 #endif
 
     /* Flags for command line arguments */
-    struct pairup_options x;
+    static struct pairup_options x;  /* static: the ensure list is large */
     pairup_options_init (&x);
-    char graph_output[1024];
-    struct user_defined_ensure_list elist;
 
     /* Parse the command line arguments using while loop */
     int c;
@@ -170,7 +156,6 @@ main (int argc, char *argv[])
         {
             case 'd':
                 debug_level = parse_debug_level (optarg);
-                x.debug_level = debug_level;
                 break;
             case 'g':
                 if (!has_installed_graphviz())
@@ -179,17 +164,16 @@ main (int argc, char *argv[])
                     exit (EXIT_FAILURE);
                 }
                 x.generate_graph = true;
-                if (optarg)
-                    strcpy (graph_output, (const char *)optarg);
-                else
-                    strcpy (graph_output, "relations.png");
+                snprintf (x.graph_output, sizeof(x.graph_output), "%s",
+                          optarg ? optarg : "relations.png");
                 break;
             case 's':
                 x.show_csv = true;
                 break;
             case 'e':
-                x.ensure = true;
-                append_user_defined_ensure_list (&elist, optarg);
+                if (!pairup_options_add_ensure (&x, optarg))
+                    fprintf (stderr, "%s: too many --ensure members, ignoring '%s'\n",
+                             program_name, optarg);
                 break;
             case 'j':
                 x.json_output = true;
@@ -198,8 +182,8 @@ main (int argc, char *argv[])
                 x.enable_flex = true;
                 break;
             case 'p':
-                x.priority = true;
-                strncpy(x.priority_func, optarg, 1024);
+                fprintf (stderr, "%s: --priority is deprecated and ignored, "
+                         "the solver always finds the maximum matching\n", program_name);
                 break;
             case 'v':
                 printf ("%s\n", PROGRAM_VERSION);
@@ -226,23 +210,29 @@ main (int argc, char *argv[])
 
     /* Read the csv file */
     sheet_t worksheet = read_csv (path);
+    char err[256] = "";
 
     if (x.generate_graph)
     {
-        generate_graph_output_image (&worksheet, graph_output);
+        pairup_problem *problem = malloc (sizeof(*problem));
+        if (!problem || pairup_problem_load (&worksheet, &x, problem, err, sizeof(err)) != 0)
+        {
+            fprintf (stderr, "%s: %s\n", program_name, problem ? err : "out of memory");
+            free (problem);
+            exit (EXIT_FAILURE);
+        }
+        generate_graph_output_image (problem, x.graph_output);
+        free (problem);
         return 0;
     }
+
     if (x.show_csv)
     {
         print_worksheet (&worksheet);
         return 0;
     }
-    if (x.ensure == true)
-    {
-        x.ensure_member_list = &elist;
-    }
 
-    /* Randomize the worksheet rows to avoid bias */
+    /* Randomize the worksheet rows so ties between optimal results are broken fairly */
     debug_printf(DEBUG_INFO, "\
 [ INFO    ] Shuffling each row inside the input worksheet to avoid bias result ...\n");
     shuffle_worksheet (&worksheet, time(NULL));
@@ -250,12 +240,17 @@ main (int argc, char *argv[])
 
     /* Trigger the top-level pairup function */
     debug_printf(DEBUG_INFO, "[ INFO    ] Starting the pairing up process ...\n");
-    pair_result_t *result = __pairup__ (&worksheet, &x);
+    pairup_result *result = pairup_run (&worksheet, &x, err, sizeof(err));
+    if (!result)
+    {
+        fprintf (stderr, "%s: %s\n", program_name, err);
+        exit (EXIT_FAILURE);
+    }
 
     /* Print the result */
     if (x.json_output == true)
     {
-        cJSON *root = init_result_json_object (&worksheet, result);
+        cJSON *root = init_result_json_object (result);
         char *json_output = get_result_json_string (root);
         fprintf (stdout, "%s\n", json_output);
         free_result_json_object (root);
@@ -263,11 +258,11 @@ main (int argc, char *argv[])
     }
     else
     {
-        print_result (&worksheet, result);
+        print_result (result);
     }
 
-    free_pair_result (result);
-
+    pairup_result_free (result);
     debug_printf(DEBUG_INFO, "[ INFO    ] Done!\n");
+
     return 0;
 }

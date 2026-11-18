@@ -18,38 +18,40 @@ You can choose to \n\
 related to weekly topic. ONLY on Monday can talk about \
 your last weekend or sharing something interesting."
 
-/* Currently not used */
-#define DEBUG_LOG_FORMATTED_MESSAGE(format, args) \
-    do { \
-        if (format != NULL) { \
-            vprintf (format, args); \
-            printf ("\n"); \
-        } \
-    } while (0)
+/* Name of the algorithm reported in the JSON output */
+#define PAIRUP_ALGORITHM_NAME "HIGHS_ILP"
 
+/* Raw worksheet (--show-csv) */
 void
 print_worksheet (sheet *worksheet);
 
+/* Pairing result as the chat message */
 void
-print_result (sheet *worksheet,
-              pair_result *result);
+print_result (const pairup_result *result);
 
+/* Pairing result as JSON; free with `free_result_json_object` */
+cJSON *
+init_result_json_object (const pairup_result *result);
+
+void free_result_json_object (cJSON *root);
+void free_result_json_string (char *str);
+#define get_result_json_string cJSON_Print
+
+/* Relation graph (--graph): who can practice with whom */
 void
-generate_graph_output_image (sheet *worksheet,
+generate_graph_output_image (const pairup_problem *problem,
                              const char *filename);
 
 void
-print_graph_to_file (sheet *worksheet,
+print_graph_to_file (const pairup_problem *problem,
                      const char *filename);
+
+/* Debug helpers, used as `callback`s */
 void
-print_digraph_to_file (sheet *worksheet,
-                       const char *filename);
+display_summary (const pairup_result *result);
 
 void
-display_summary (pair_result *result);
-
-void
-display_graph (void *graph);
+display_graph (const pairup_problem *problem);
 
 /* Debug levels */
 // None -> Error -> Warning -> Summary -> Info -> All
@@ -60,13 +62,6 @@ display_graph (void *graph);
 #define DEBUG_INFO     4
 #define DEBUG_ALL      5
 
-/* Macros to log messages */
-#define log_message(file, fmt, ...) \
-    do { \
-        fprintf (file, fmt, ##__VA_ARGS__); \
-    } while (0)
-
-
 /* Macros to log messages or perform actions based on debug level */
 #define debug_printf(level, fmt, ...) \
     do_if_debug_level_is_greater(level, NULL, NULL, fmt, ##__VA_ARGS__)
@@ -74,33 +69,15 @@ display_graph (void *graph);
 #define debug_action(level, callback, context) \
     do_if_debug_level_is_greater(level, callback, context, NULL)
 
-#define debug_task(level, callback, context, fmt, ...) \
-    do_if_debug_level_is_greater(level, callback, context, fmt, ##__VA_ARGS__)
-
 extern int debug_level;
 
 /* Callback function type */
 typedef void (*callback)(void *context);
-
-/* Macro for output string */
-#define RESULT_SUMMARY_MESSAGE "Displaying result statistics...\n"
-#define GRAPH_STATS_MESSAGE    "Displaying relation graph...\n"
 
 /* Function to handle conditional logging or callback execution based on debug level */
 void do_if_debug_level_is_greater (int level,
                                   callback fptr,
                                   void *context,
                                   const char *fmt, ...);
-
-// cJSON *new_format_error_json_object ();
-
-cJSON *init_result_json_object (sheet_t *workseet,
-                                result_t *r);
-
-void free_result_json_object (cJSON *root);
-
-void free_result_json_string (char *str);
-
-#define get_result_json_string cJSON_Print
 
 #endif  // PAIRUP_FORMATTER_H

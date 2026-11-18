@@ -1,208 +1,129 @@
 #ifndef PAIRUP_TYPES_H
 #define PAIRUP_TYPES_H
 
-#include <stddef.h>
-#include <stdlib.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
-/* Maximum length of the name */
-#define  MAX_NAME_LEN     4096
-// #define  MAX_MATCHES_LEN  4096
-#define  MAX_MATCHES_LEN  64 
-#define  MAX_MEMBERS_LEN  64 
+/*********************************  Limits  ******************************************/
 
-/* Boundaries for the sheet that containing real data */
-#define  FIELD_COL_NAME   0 
+#define  PAIRUP_MAX_MEMBERS   256
+#define  PAIRUP_MAX_SLOTS     32     /* availability is stored as a 32-bit mask */
+#define  PAIRUP_MAX_NAME      256
+#define  PAIRUP_MAX_LABEL     32
+#define  PAIRUP_MAX_RANGE     64     /* "1900~2030" style merged range label */
+#define  PAIRUP_MAX_ENSURE    64
+/* Each member requests at most two practices, so pairs <= members */
+#define  PAIRUP_MAX_PAIRS     PAIRUP_MAX_MEMBERS
+
+/****************************  Google Sheet layout  **********************************/
+/*
+ * Row 0 is the header. From FIELD_COL_START on, the column whose header is
+ * "FLEX" is the flex column and every other non-empty header (e.g. "1900~1930")
+ * is a time slot. Member rows start at FIELD_ROW_START and the last row of the
+ * sheet is a summary row.
+ */
+#define  FIELD_COL_NAME   0
 #define  FIELD_ROW_START  1
 #define  FIELD_COL_START  2
-#define  FIELD_COL_END    16
-#define  FIELD_COL_FLEX   17
-#define  FIELD_COL_END_LEGACY   16
+#define  FIELD_COL_END    16   /* only used to format `--show-csv` output */
 
-/* Sentinel value for a flex-time pair (no fixed time slot) */
-#define  FLEX_SLOT        (-1)
+/*********************************  Problem  *****************************************/
 
-/********************************  Types aliasess  ************************************/
-
-/* Slot */
-typedef int slot;
-
-/* Member */
-typedef struct member member_t;
-typedef struct member member;  // Recommended
-typedef struct member memb;
-
-/* Pair */
-typedef struct pair pair_t;
-typedef struct pair pair;  // Recommended
-
-/* Relation */
-typedef struct relation relation_t;
-typedef struct relation relation;
-
-/* Relation graph */
-typedef struct relation_graph relation_graph_t;
-typedef struct relation_graph relation_graph;
-typedef struct relation_graph graph_t;
-typedef struct relation_graph graph;  // Recommended
-
-/* Pair result */
-typedef struct pair_result pair_result_t;
-typedef struct pair_result pair_result;  // Recommended
-typedef struct pair_result result_t;
-typedef struct pair_result result;
-
-typedef struct user_defined_ensure_list ensure_list;
-typedef struct user_defined_ensure_list udel;
-
-/**********************************  Data types  **************************************/
-
-/* Member's info and their willingness to practice on that day */
-struct member
+/* A member who filled in at least one usable cell on the sheet */
+typedef struct pairup_member
 {
-    int    id;                 // Row number on the google sheet
-    char   name[MAX_NAME_LEN]; // Name of the member
-    size_t requests;           // Number of requested practices (0, 1 or 2)
-    size_t availability;       // Number of slots available on that day
-    slot   earliest_slot;      // Earliest time slot on the sheet
-    int    ensure_score;       // Ensure score (higher value -> higher priority,
-                               //               0 -> feature not used).
-};
+    char     name[PAIRUP_MAX_NAME];
+    int      row;          /* row on the (possibly shuffled) sheet */
+    int      requests;     /* requested practices today: 1 or 2 */
+    uint32_t avail;        /* bit t set -> available in problem slot t */
+    bool     ensured;      /* listed with --ensure */
+} pairup_member;
 
-/* A successful pair will contain two members and a matched time slot */
-struct pair
+typedef struct pairup_slot
 {
-    member *a;           // Member A's information
-    member *b;           // Member B's information
-    slot time;           // Available time slot for a and b
-};
+    char label[PAIRUP_MAX_LABEL];  /* "1900~1930", or "flex" for the flex slot */
+    int  col;                      /* column on the sheet */
+    bool is_flex;
+} pairup_slot;
 
-/* A relation is a member and his/her pairing candidates */
-/* Technically, it's a row in adjacency list representation (See next struct) */
-struct relation
+/* Everything the solver needs, detached from the CSV representation */
+typedef struct pairup_problem
 {
-    size_t count;                                // Number of candidates for this member
-    member *candidates[MAX_MATCHES_LEN];         // Candidates for this member
-    slot matched_slot[MAX_MATCHES_LEN];          // Matched time slot for this member
+    int           n_members;
+    pairup_member members[PAIRUP_MAX_MEMBERS];
+    int           n_slots;
+    pairup_slot   slots[PAIRUP_MAX_SLOTS];
+} pairup_problem;
 
-    size_t availability;                         // Number of slots available on that day
-    slot available_slot[MAX_MATCHES_LEN];        // Available time slot for this member
-};
+/**********************************  Result  *****************************************/
 
-/* A graph represents today's matching relations between members */
-/* Technically, it's a graph data type using adjacency list representation */
-/* Adjacency list will be more convinient when using DFS or BFS to walk through the graph */
-struct relation_graph
+typedef struct pairup_pair
 {
-    size_t count;                                // Number of relations
-    relation *relations[MAX_MATCHES_LEN];        // Relations
-};
+    int a;      /* index into problem.members */
+    int b;      /* index into problem.members */
+    int slot;   /* index into problem.slots */
+} pairup_pair;
 
-typedef pair_result *
-(*pairup_internal) (relation_graph *today,
-                    member_t *member_list[]);
-
-struct pairup_algorithm
+typedef enum pairup_status
 {
-    const char *name;
-    const pairup_internal algorithm;
-    /*int (*compare_fn)(const void *, const void *);*/
-};
+    PAIRUP_OPTIMAL = 0,    /* proven maximum */
+    PAIRUP_FEASIBLE,       /* time limit hit; best solution found so far */
+} pairup_status;
 
-/* A pair result contains the successful pairs and the remaining singles */
-struct pair_result
+/* The result owns a copy of the problem, so it can be rendered on its own */
+typedef struct pairup_result
 {
-    size_t member;
-    size_t singles;
-    size_t pairs;
-    size_t total_requests;
-    slot matched_slot[MAX_MATCHES_LEN];
-    struct member *member_list[MAX_MATCHES_LEN];
-    struct member *single_list[MAX_MATCHES_LEN];
-    char single_suggestion_time[MAX_MEMBERS_LEN][256];  // TODO: find better way avoid BOF
-    pair *pair_list[MAX_MATCHES_LEN];
-    struct pairup_algorithm *algorithm_applied;
-};
+    pairup_problem problem;
+    pairup_status  status;
+    int            total_requests;
+    int            n_pairs;
+    pairup_pair    pairs[PAIRUP_MAX_PAIRS];
+    int            n_singles;                  /* members with unmet requests */
+    int            singles[PAIRUP_MAX_MEMBERS];
+} pairup_result;
 
-/* New feature under development */
-struct user_defined_ensure_list
+/* Portable popcount (MSVC has no __builtin_popcount) */
+static inline int
+pairup_popcount (uint32_t x)
 {
-    size_t ensure_list_size;
-    char ensure_list_content[MAX_MEMBERS_LEN][MAX_NAME_LEN];
-};
+    int n = 0;
+    for (; x; x &= x - 1)
+        n++;
+    return n;
+}
 
-/* For example: */
-// relation_graph today;           --> A graph named 'today'
-// today.relations[i].name;          --> Name of the i-th member in the graph
-// today.relations[i].candidates[j]  --> The j-th candidate of the i-th member
+/*********************************  Options  *****************************************/
 
 struct pairup_options
 {
-    bool show_csv;
-    bool json_output;
-    bool generate_graph;
-    char graph_output[1024];
-    bool ensure;
-    udel *ensure_member_list;
-    bool priority;
-    char priority_func[1024];
-    int  debug_level;
-    bool enable_flex;
+    bool   show_csv;
+    bool   json_output;
+    bool   generate_graph;
+    char   graph_output[1024];
+    bool   enable_flex;
+    size_t n_ensure;
+    char   ensure[PAIRUP_MAX_ENSURE][PAIRUP_MAX_NAME];
+    double time_limit;     /* seconds; the solver returns its best solution when hit */
 };
-
-/********************************  Number of practices  *********************************/
-
-extern const char *zero_sign[];
-
-extern const char *once_sign[];
-
-extern const char *twice_sign[];
-
-/**********************************  Helper functions  **********************************/
-
-bool is_zero (const char *sign);
-
-bool is_once (const char *sign);
-
-bool is_twice (const char *sign);
-
-bool is_available (const char *sign);
-
-/****************************  Allocator and Deallocator  ********************************/
 
 void
 pairup_options_init (struct pairup_options *x);
 
-member_t *
-new_member (void);
+/* Returns false if the list is full */
+bool
+pairup_options_add_ensure (struct pairup_options *x,
+                           const char *name);
 
-void
-free_member (member_t *member);
+/****************************  Cell value helpers  ***********************************/
 
-pair *
-new_pair (void);
+extern const char *zero_sign[];
+extern const char *once_sign[];
+extern const char *twice_sign[];
 
-void
-free_pair (pair *pair);
-
-relation *
-new_relation (void);
-
-void
-free_relation (relation *relation);
-
-relation_graph *
-new_relation_graph (void);
-
-void 
-free_relation_graph (relation_graph *today);
-
-pair_result *
-new_pair_result (int member,
-                 int pairs,
-                 int singles);
-
-void
-free_pair_result (pair_result *result);
+bool is_zero (const char *sign);
+bool is_once (const char *sign);
+bool is_twice (const char *sign);
+bool is_available (const char *sign);
 
 #endif  // PAIRUP_TYPES_H

@@ -1,7 +1,3 @@
-#define BUILD_LIB_PAIRUP 1
-
-#if defined (BUILD_LIB_PAIRUP)
-
 #ifndef LIB_PAIRUP_H
 #define LIB_PAIRUP_H
 
@@ -9,32 +5,38 @@
 extern "C" {
 #endif
 
-#include "pairup/pairup-types.h"
-#include "pairup/pairup-algorithm.h"
-#include "pairup/pairup-formatter.h"
-#include "rw-csv.h"
+#include <stdint.h>
+
+#include "pairup/pairup.h"
+#include "cJSON.h"
 
 /* Essential Types */
-typedef sheet_t sheet;
-typedef result_t result;
-typedef struct pairup_options options;
+typedef pairup_result          result;
+typedef struct pairup_options  options;
 
 #define PairUP_FreeJSONObject free_result_json_object
 #define PairUP_FreeJSONString free_result_json_string
 
 /* Read CSV source data */
-sheet PairUP_Read(const char *path);
+sheet PairUP_Read (const char *path);
 
 void PairUP_DefaultOption (options *opt);
 
-result *PairUP_Generate(sheet *worksheet, options *opt, uint32_t seed);
+/*
+ * Compute the optimal pairing. `opt` may be NULL for defaults. A non-zero
+ * `seed` shuffles the rows first, which changes how ties are broken.
+ * Returns NULL on error; free the result with `PairUP_Free`.
+ */
+result *PairUP_Generate (sheet *worksheet, const options *opt, uint32_t seed);
 
-cJSON *PairUP_ConvertToJSON(sheet *worksheet, result *result);
+/* The result is self-contained: no worksheet is needed to render it */
+cJSON *PairUP_ConvertToJSON (const result *r);
+char *PairUP_ConvertToString (const result *r);
 
-char *PairUP_ConvertToString(sheet *worksheet, result *result);
+void PairUP_Free (result *r);
 
 #ifdef __cplusplus
 }
 #endif
+
 #endif /* LIB_PAIRUP_H */
-#endif
