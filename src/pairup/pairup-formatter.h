@@ -37,12 +37,13 @@ void free_result_json_object (cJSON *root);
 void free_result_json_string (char *str);
 #define get_result_json_string cJSON_Print
 
-/* Relation graph (--graph): who can practice with whom */
+/* Relation graph (--graph): who can practice with whom, plus the ILP model */
 void
 generate_graph_output_image (const pairup_problem *problem,
                              const char *filename);
 
-void
+/* Writes the DOT source, including every constraint of the ILP. Returns 0 on success. */
+int
 print_graph_to_file (const pairup_problem *problem,
                      const char *filename);
 

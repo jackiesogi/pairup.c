@@ -6,6 +6,7 @@
 
 #include "pairup-formatter.h"
 #include "pairup-problem.h"
+#include "pairup-model.h"
 #include "portable_wcwidth.h"
 
 #define FLEX_ONLY_SUGGESTION "????~????"
@@ -250,39 +251,169 @@ void free_result_json_string (char *str)
 
 /******************************  Relation graph  *************************************/
 
-static int
-calculate_dpi (int line_count)
+/* Escape for a double-quoted DOT string */
+static void
+fput_dot_string (FILE *f,
+                 const char *str)
 {
-    int base_dpi = 72;
-    int max_dpi = 600;
-    int threshold = 200;
-
-    if (line_count >= threshold)
-        return max_dpi;
-
-    return base_dpi + (max_dpi - base_dpi) * line_count / threshold;
+    fputc ('"', f);
+    for (; *str; str++)
+    {
+        if (*str == '"' || *str == '\\')
+            fputc ('\\', f);
+        fputc (*str, f);
+    }
+    fputc ('"', f);
 }
 
-static int
-count_lines (const char *filename)
+/* Escape for text inside a DOT HTML-like label */
+static void
+fput_html (FILE *f,
+           const char *str)
 {
-    FILE *file = fopen (filename, "r");
-    if (!file)
+    for (; *str; str++)
     {
-        perror ("Error opening file");
-        return 0;
+        switch (*str)
+        {
+            case '&': fputs ("&amp;", f); break;
+            case '<': fputs ("&lt;", f); break;
+            case '>': fputs ("&gt;", f); break;
+            case '"': fputs ("&quot;", f); break;
+            default:  fputc (*str, f);
+        }
+    }
+}
+
+static const char *const row_titles[] = {
+    [PAIRUP_ROW_SLOT]     = "SLOT: each member uses each time slot at most once",
+    [PAIRUP_ROW_REQUESTS] = "REQUESTS: no more practices than the member requested",
+    [PAIRUP_ROW_PARTNER]  = "PARTNER: never the same partner twice",
+    [PAIRUP_ROW_ENSURE]   = "ENSURE: y can only be 1 if the --ensure member is paired",
+};
+
+/* x columns come first, then y columns (see pairup_model_build) */
+static void
+fput_col_name (FILE *f,
+               const pairup_model *m,
+               int j)
+{
+    if (m->cols[j].kind == PAIRUP_COL_PAIR)
+    {
+        fprintf (f, "x%d", j + 1);
+        return;
+    }
+    int n_pair = 0;
+    while (n_pair < m->n_cols && m->cols[n_pair].kind == PAIRUP_COL_PAIR)
+        n_pair++;
+    fprintf (f, "y%d", j - n_pair + 1);
+}
+
+static void
+fput_row_label (FILE *f,
+                const pairup_problem *p,
+                const pairup_row *r)
+{
+    fput_html (f, p->members[r->a].name);
+    if (r->kind == PAIRUP_ROW_SLOT)
+    {
+        fputs (" @ ", f);
+        fput_html (f, p->slots[r->slot].label);
+    }
+    else if (r->kind == PAIRUP_ROW_PARTNER)
+    {
+        fputs (" &amp; ", f);
+        fput_html (f, p->members[r->b].name);
+    }
+}
+
+#define TD_HEAD "<TD ALIGN=\"LEFT\" COLSPAN=\"3\" BGCOLOR=\"#e8e8e8\"><B>"
+#define TD      "<TD ALIGN=\"LEFT\">"
+
+/* The whole ILP as an HTML-like table, used as the graph label */
+static void
+fput_model_table (FILE *f,
+                  const pairup_problem *p,
+                  const pairup_model *m)
+{
+    int *row_start = NULL, *col_index = NULL;
+    double *value = NULL;
+
+    fprintf (f, "<<TABLE BORDER=\"1\" CELLBORDER=\"0\" CELLSPACING=\"0\" CELLPADDING=\"3\">\n");
+    fprintf (f, "<TR><TD COLSPAN=\"3\"><B>ILP sent to HiGHS: %d variables, %d constraints</B></TD></TR>\n",
+             m->n_cols, m->n_rows);
+
+    if (m->n_cols == 0)
+    {
+        fprintf (f, "<TR><TD COLSPAN=\"3\">Nobody shares a time slot, nothing to solve.</TD></TR>\n");
+        fprintf (f, "</TABLE>>");
+        return;
     }
 
-    int lines = 0;
-    int ch;
-    while ((ch = fgetc (file)) != EOF)
+    /* Variables and their objective coefficients */
+    fprintf (f, "<TR>" TD_HEAD "Variables (binary) and objective: maximize the sum of weight * variable</B></TD></TR>\n");
+    for (int j = 0; j < m->n_cols; j++)
     {
-        if (ch == '\n')
-            lines++;
+        const pairup_col *c = &m->cols[j];
+        fprintf (f, "<TR>" TD);
+        fput_col_name (f, m, j);
+        fprintf (f, "</TD>" TD);
+        if (c->kind == PAIRUP_COL_PAIR)
+        {
+            fput_html (f, p->members[c->a].name);
+            fputs (" + ", f);
+            fput_html (f, p->members[c->b].name);
+            fputs (" @ ", f);
+            fput_html (f, p->slots[c->slot].label);
+        }
+        else
+        {
+            fput_html (f, p->members[c->a].name);
+            fputs (" has a partner (--ensure)", f);
+        }
+        fprintf (f, "</TD>" TD "weight %g</TD></TR>\n", c->cost);
     }
 
-    fclose (file);
-    return lines;
+    /* Constraints, grouped by rule */
+    if (pairup_model_rowwise (m, &row_start, &col_index, &value) != 0)
+    {
+        fprintf (f, "<TR><TD COLSPAN=\"3\">(out of memory while listing constraints)</TD></TR>\n</TABLE>>");
+        return;
+    }
+
+    for (int kind = PAIRUP_ROW_SLOT; kind <= PAIRUP_ROW_ENSURE; kind++)
+    {
+        bool header = false;
+        for (int i = 0; i < m->n_rows; i++)
+        {
+            const pairup_row *r = &m->rows[i];
+            if ((int) r->kind != kind)
+                continue;
+            if (!header)
+            {
+                fprintf (f, "<TR>" TD_HEAD "%s</B></TD></TR>\n", row_titles[kind]);
+                header = true;
+            }
+
+            fprintf (f, "<TR>" TD);
+            fput_row_label (f, p, r);
+            fprintf (f, "</TD><TD ALIGN=\"LEFT\" COLSPAN=\"2\">");
+            for (int k = row_start[i]; k < row_start[i + 1]; k++)
+            {
+                bool negative = value[k] < 0;
+                if (k > row_start[i])
+                    fputs (negative ? " - " : " + ", f);
+                else if (negative)
+                    fputs ("-", f);
+                fput_col_name (f, m, col_index[k]);
+            }
+            fprintf (f, " &lt;= %g</TD></TR>\n", r->upper);
+        }
+    }
+
+    fprintf (f, "</TABLE>>");
+    free (row_start);
+    free (col_index);
+    free (value);
 }
 
 void
@@ -292,12 +423,11 @@ generate_graph_output_image (const pairup_problem *problem,
     char dotfile[1024];
     snprintf (dotfile, sizeof(dotfile), "%s.dot", filename);
 
-    print_graph_to_file (problem, dotfile);
-
-    int dpi = calculate_dpi (count_lines (dotfile));
+    if (print_graph_to_file (problem, dotfile) != 0)
+        return;
 
     char command[2200];
-    snprintf (command, sizeof(command), "dot -Tpng -Gdpi=%d %s -o %s", dpi, dotfile, filename);
+    snprintf (command, sizeof(command), "dot -Tpng -Gdpi=150 \"%s\" -o \"%s\"", dotfile, filename);
 
     if (system (command) != 0)
     {
@@ -317,27 +447,43 @@ first_slot (uint32_t mask)
     return t;
 }
 
-void
+int
 print_graph_to_file (const pairup_problem *problem,
                      const char *filename)
 {
+    char err[256];
+    pairup_model model;
+
+    if (pairup_model_build (problem, &model, err, sizeof(err)) != 0)
+    {
+        fprintf (stderr, "Error: %s\n", err);
+        return -1;
+    }
+
     printf ("Output: %s\n", filename);
     FILE *file = fopen (filename, "w");
     if (file == NULL)
     {
         fprintf (stderr, "Error: cannot open file %s\n", filename);
-        return;
+        pairup_model_free (&model);
+        return -1;
     }
 
     fprintf (file, "graph G {\n");
     fprintf (file, "    /* File attributes */\n");
-    fprintf (file, "    size=\"6,4\";\n    ratio=fill;\n");
+    fprintf (file, "    labelloc=b;\n    labeljust=l;\n");
 
     fprintf (file, "\n    /* Node attributes */\n");
     for (int i = 0; i < problem->n_members; i++)
     {
         const pairup_member *m = &problem->members[i];
-        fprintf (file, "    \"%s\" [label=\"%s: %d\"];\n", m->name, m->name, m->requests);
+        char label[PAIRUP_MAX_NAME + 16];
+        snprintf (label, sizeof(label), "%s: %d", m->name, m->requests);
+        fputs ("    ", file);
+        fput_dot_string (file, m->name);
+        fputs (" [label=", file);
+        fput_dot_string (file, label);
+        fputs ("];\n", file);
     }
 
     /* One edge per pair of members, labelled with their earliest shared slot */
@@ -349,16 +495,26 @@ print_graph_to_file (const pairup_problem *problem,
             uint32_t common = problem->members[a].avail & problem->members[b].avail;
             if (!common)
                 continue;
-            fprintf (file, "    \"%s\" -- \"%s\" [label=\"%s\" fontsize=7];\n",
-                     problem->members[a].name, problem->members[b].name,
-                     problem->slots[first_slot (common)].label);
+            fputs ("    ", file);
+            fput_dot_string (file, problem->members[a].name);
+            fputs (" -- ", file);
+            fput_dot_string (file, problem->members[b].name);
+            fputs (" [label=", file);
+            fput_dot_string (file, problem->slots[first_slot (common)].label);
+            fputs (" fontsize=7];\n", file);
         }
     }
 
-    fprintf (file, "}\n");
+    fprintf (file, "\n    /* The ILP handed to the solver */\n");
+    fprintf (file, "    label=");
+    fput_model_table (file, problem, &model);
+    fprintf (file, ";\n}\n");
+
     fclose (file);
+    pairup_model_free (&model);
 
     printf ("Graph has been written to %s\n", filename);
+    return 0;
 }
 
 /**********************************  Debug  ******************************************/

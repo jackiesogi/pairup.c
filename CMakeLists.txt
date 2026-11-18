@@ -55,6 +55,7 @@ set(PAIRUP_SOURCES
     # Internal
     ${SRC_DIR}/pairup/pairup.c
     ${SRC_DIR}/pairup/pairup-problem.c
+    ${SRC_DIR}/pairup/pairup-model.c
     ${SRC_DIR}/pairup/pairup-solver.c
     ${SRC_DIR}/pairup/pairup-formatter.c
     ${SRC_DIR}/pairup/pairup-types.c
