@@ -20,9 +20,11 @@
 /*
  * Row 0 is the header. From FIELD_COL_START on, the column whose header is
  * "FLEX" is the flex column and every other non-empty header (e.g. "1900~1930")
- * is a time slot. Member rows start at FIELD_ROW_START and the last row of the
- * sheet is a summary row.
+ * is a time slot. Member rows start at FIELD_ROW_START. The summary row is the
+ * one named PAIRUP_SUMMARY_NAME (or the last row, if no row has that name).
+ * Rows without a name are ignored.
  */
+#define  PAIRUP_SUMMARY_NAME  "填答數"
 #define  FIELD_COL_NAME   0
 #define  FIELD_ROW_START  1
 #define  FIELD_COL_START  2

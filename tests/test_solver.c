@@ -198,7 +198,10 @@ test_load_sheet (void)
     fputs ("Bob,,,2,2,,Bob\r\n", f);
     fputs ("Carol,,,,,1,Carol\r\n", f);
     fputs ("Dave,,,,,,Dave\r\n", f);
-    fputs ("Total,,1,2,1,1,Total\r\n", f);
+    fputs ("填答數,,1,2,1,1,填答數\r\n", f);
+    /* Stray marks below the table: no name, so they must be ignored */
+    fputs (",,,2,2,,\r\n", f);
+    fputs (",,,,v,,", f);
     fclose (f);
 
     sheet_t ws = read_csv (path);

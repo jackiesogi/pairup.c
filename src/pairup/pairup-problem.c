@@ -47,6 +47,27 @@ cell_at (const sheet_t *worksheet,
     return worksheet->data[row][col];
 }
 
+/* Name cell is blank (`read_csv` stores empty cells as " -- ") */
+static bool
+is_blank_name (const char *name)
+{
+    char buf[PAIRUP_MAX_NAME];
+    if (!name)
+        return true;
+    copy_utf8 (buf, sizeof(buf), name, true);
+    return buf[0] == '\0' || strcmp (buf, "--") == 0;
+}
+
+static bool
+is_summary_name (const char *name)
+{
+    char buf[PAIRUP_MAX_NAME];
+    if (!name)
+        return false;
+    copy_utf8 (buf, sizeof(buf), name, true);
+    return strcmp (buf, PAIRUP_SUMMARY_NAME) == 0;
+}
+
 static bool
 is_flex_header (const char *label)
 {
@@ -188,11 +209,23 @@ pairup_problem_load (const sheet_t *worksheet,
 
     debug_printf (DEBUG_INFO, "[ INFO    ] Generating member list ...\n");
 
-    /* The last row of the sheet is the summary row, so it is skipped */
-    for (int i = FIELD_ROW_START; i < worksheet->rows - 1; i++)
+    /*
+     * Member rows are every row with a name, except the summary row. Older
+     * sheets without a summary label keep the summary in the last row.
+     */
+    bool has_summary_row = false;
+    for (int i = FIELD_ROW_START; i < worksheet->rows; i++)
+        has_summary_row |= is_summary_name (cell_at (worksheet, i, FIELD_COL_NAME));
+    const int last_row = has_summary_row ? worksheet->rows : worksheet->rows - 1;
+
+    for (int i = FIELD_ROW_START; i < last_row; i++)
     {
         uint32_t avail = 0;
         int requests = 0;
+        const char *name = cell_at (worksheet, i, FIELD_COL_NAME);
+
+        if (is_summary_name (name))
+            continue;
 
         for (int t = 0; t < problem->n_slots; t++)
         {
@@ -209,6 +242,19 @@ pairup_problem_load (const sheet_t *worksheet,
         if (avail == 0)
             continue;
 
+        if (is_blank_name (name))
+        {
+            /* Rows are shuffled, so describe the row by what was filled in */
+            debug_printf (DEBUG_WARNING, "[ WARNING ] Ignoring a row with no name, filled in at:");
+            for (int t = 0; t < problem->n_slots; t++)
+            {
+                if ((avail >> t) & 1u)
+                    debug_printf (DEBUG_WARNING, " %s", problem->slots[t].label);
+            }
+            debug_printf (DEBUG_WARNING, "\n");
+            continue;
+        }
+
         if (problem->n_members >= PAIRUP_MAX_MEMBERS)
         {
             snprintf (err, err_size, "too many members (max %d)", PAIRUP_MAX_MEMBERS);
@@ -216,8 +262,7 @@ pairup_problem_load (const sheet_t *worksheet,
         }
 
         pairup_member *m = &problem->members[problem->n_members++];
-        const char *name = cell_at (worksheet, i, FIELD_COL_NAME);
-        copy_utf8 (m->name, sizeof(m->name), name ? name : " -- ", false);
+        copy_utf8 (m->name, sizeof(m->name), name, false);
         m->row = i;
         m->requests = requests;
         m->avail = avail;
